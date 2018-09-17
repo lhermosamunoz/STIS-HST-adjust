@@ -1,4 +1,4 @@
-''
+'''
 This script makes a gaussian fit to the emission lines of AGN spectra
 It is needed a path, the spectrum in which the fit is going to be made and the initial estimation of the fit
 '''
@@ -6,18 +6,56 @@ It is needed a path, the spectrum in which the fit is going to be made and the i
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
-import usefunctions
+import lmfit
 
 
 ######################### Define the PATHS to the data and extract the spectra ###################################
 #
 #path      = input('Path to the data fits? (ex. "/mnt/data/lhermosa/HLA_data/NGC.../o.../ext_spec_crop.fits"): ')
 hdulist   = fits.open('/mnt/data/lhermosa/HLA_data/NGC3245/O57205030_STISCCD_G750M/ext_spec_combin_crop.fits')	#path)	# Open the fit file to read the information
-#hdulist   = fits.open('/mnt/data/lhermosa/HLA_data/NGC4736/o67110040_STISCCD_G750M/ext_spec.fits')	#path)	# Open the fit file to read the information
 hdu       = hdulist[0]			# Extract the extension in which the spectra is saved
 data      = hdu.data			# Save the data (i.e. the values of the flux per pixel)
 data_head = hdu.header			# Save the header of the data
 hdulist.close()				# Close the file as we don't need it anymore
+
+
+###################################### Define the FUNCTIONS #####################################################
+#
+# Create a function to fit the data to a Gaussian given some initial values
+def gaussian(x,mu,sigm,amp):
+    '''
+    Gaussian distribution
+    
+    x - values for the fit
+    p[0]: mu - mean of the distribution
+    p[1]: sigma - stddev
+    p[2]: amplitude
+    '''
+    return amp*np.exp(-(x-mu)**2/(2*sigm**2))
+
+
+# Function to create the gaussian and the linear fit
+def funcgauslin(x,slope,intc,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,mu_3,sig_3,amp_3,mu_4,sig_4,amp_4):
+    '''
+    Function to fit the spectra to a gaussian + linear.
+
+    The parameters to introduce have to be the initial guesses for both components. 
+    The first two values need to be the slope and the intercept, and then the rest 
+    will be the parameters for fitting the gaussians.
+    x - values for the fit
+    params: The first two have to be the slope and the intercept of the linear fit
+	    1. mu - mean of the distribution
+	    2. sigma - stddev
+	    3. amplitude
+    '''
+    fy = np.zeros_like(x)
+    fy = fy + (slope*x+intc)
+    fy  = fy + gaussian(x,mu_0,sig_0,amp_0)
+    fy  = fy + gaussian(x,mu_1,sig_1,amp_1)
+    fy  = fy + gaussian(x,mu_2,sig_2,amp_2)
+    fy  = fy + gaussian(x,mu_3,sig_3,amp_3)
+    fy  = fy + gaussian(x,mu_4,sig_4,amp_4)
+    return fy
 
 
 ############################# Transform data and plot the spectra ################################################
@@ -85,6 +123,19 @@ newy3    = data_cor[liminf:limsup+1]
 mu_2  = newx3[np.argmax(newy3)]
 amp_2 = max(newy3)
 
+liminf   = np.where(l>6590.)[0][0]
+limsup   = np.where(l<6600.)[0][-1]
+newx4    = l[liminf:limsup+1]
+newy4    = data_cor[liminf:limsup+1]
+mu_3  = newx4[np.argmax(newy4)]
+amp_3 = max(newy4)
+
+liminf   = np.where(l>6500.)[0][0]
+limsup   = np.where(l<6580.)[0][-1]
+newx5    = l[liminf:limsup+1]
+newy5    = data_cor[liminf:limsup+1]
+mu_4  = newx5[np.argmax(newy5)]
+amp_4 = max(newy5)
 
 #
 # Start the parameters for the LINEAR fit
@@ -94,24 +145,13 @@ intc  = data_cor[0]
 
 ###################################### Start the fit and the MODEL ###############################################
 
-# Start the guesses 
-p0    = [mu_0,sig_0,amp_0]
-p3    = [slope,intc,mu_0,sig_0,amp_0,mu_1,sig_0,amp_1]#,mu_2, sig_0,amp_2]
-
-fa  = {'x':newx1,'y':newy1}
-fa3 = {'x':l,'y':data_cor}
-
-
-
-# Constrains to the data 
-
-
-# Make the fit using mpfit for one gaussian and for the combination of as many gaussians as wanted with
-# a linear fit for the continuum
+# Put the constrains to each of the parameters in the fit, then make the fit using lmfit
+# for one gaussian and for the combination of as many gaussians as wanted with a linear fit
+# for the continuum
 
 
 # Calculate the residuals of the data
-resid = newy1 - usefunctions.gaussian(newx1,m.params)
+
 
 # In order to determine if the lines need one more gaussian to be fit correctly, we apply the condition
 # that the std dev of the continuum should be higher than 3 times the std dev of the residuals of the 
@@ -134,9 +174,9 @@ fig1   = plt.figure(1)
 frame1 = fig1.add_axes((.1,.3,.8,.6)) #xstart, ystart, xend, yend [units are fraction of the image frame, from bottom left corner]
 plt.plot(l,data_cor)			     # Initial data
 plt.plot(newx1,newy1,'k-')		# Selected data to do the fit
-plt.plot(newx1,usefunctions.gaussian(newx1,m.params),'g--')
+plt.plot(newx1,gaussian(newx1,resu.params['mu'],resu.params['sigm'],resu.params['amp']),'g--')
 frame1.set_xticklabels([]) #Remove x-tic labels for the first frame
-plt.plot(l,usefunctions.funcgauslin(l,m3.params),'r--')
+plt.plot(l,funcgauslin(l,resu1.params['mu'],resu1.params['sigm'],resu1.params['amp']),'r--')
 plt.ylabel('Flux (x10$^{-14} \mathrm{erg/s/cm^{2} / \AA}$)')
 plt.xlim(l[0],l[-1])
 
