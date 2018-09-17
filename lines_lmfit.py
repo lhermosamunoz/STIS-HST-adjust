@@ -145,13 +145,35 @@ intc  = data_cor[0]
 
 ###################################### Start the fit and the MODEL ###############################################
 
-# Put the constrains to each of the parameters in the fit, then make the fit using lmfit
-# for one gaussian and for the combination of as many gaussians as wanted with a linear fit
-# for the continuum
+# First we have to initialise the model by doing
+simp_mod   = lmfit.Model(gaussian)
+comp_mod   = lmfit.Model(funcgauslin)
 
+# Now we define the initial guesses and the constraints
+params = lmfit.Parameters()
+# add with tuples: (NAME VALUE VARY MIN  MAX  EXPR  BRUTE_STEP)
+# add a sequence of Parameters
+ab = lmfit.Parameter('slope', value=slope)
+bc = lmfit.Parameter('intc', value=intc)
+cd = lmfit.Parameter('mu_0', value=mu_0)
+de = lmfit.Parameter('sig_0', value=sig_0)
+ef = lmfit.Parameter('amp_0', value=amp_0)
+fg = lmfit.Parameter('mu_1', value=mu_1,expr='mu_0*(6716./6731.)')
+gh = lmfit.Parameter('sig_1', value=sig_1,expr='sig_0')
+hi = lmfit.Parameter('amp_1', value=amp_1)
+ij = lmfit.Parameter('mu_2', value=mu_2,expr='mu_0*(6584./6731.)')
+jk = lmfit.Parameter('sig_2', value=sig_2,expr='sig_0')
+kl = lmfit.Parameter('amp_2', value=amp_2)
+lm = lmfit.Parameter('mu_3', value=mu_3,expr='mu_0*(6563./6731.)')
+mn = lmfit.Parameter('sig_3', value=sig_3,expr='sig_0')
+no = lmfit.Parameter('amp_3', value=amp_3)
+op = lmfit.Parameter('mu_4', value=mu_4,expr='mu_0*(6548./6731.)')
+pq = lmfit.Parameter('sig_4', value=sig_4,expr='sig_0')
+qr = lmfit.Parameter('amp_4', value=amp_4)
+params.add_many(ab,bc,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr)
 
-# Calculate the residuals of the data
-
+# and make the fit using lmfit
+resu1 = comp_mod.fit(data_cor,params,x=l)
 
 # In order to determine if the lines need one more gaussian to be fit correctly, we apply the condition
 # that the std dev of the continuum should be higher than 3 times the std dev of the residuals of the 
@@ -167,23 +189,48 @@ stadev = np.std(data_cor[std0:std1])
 ######################################## RESULTS: PLOT and PRINT ############################################
 #############################################################################################################
 #
-#################### Plot the results ##########################
+# Now we create the individual gaussians in order to plot and print the results
+print('				RESULTS OF THE FIT: ')
+print('Linear fit equation: {:.5f}*x + {:.5f}'.format(resu1.values['slope'], resu1.values['intc']))
+print('The rest of the results can be displayed with resu1.params; the data can be accesed with resu1.params['']')
+print(resu1.params)
+
+# Now we create and plot the individual gaussians of the fit
+gaus1 = gaussian(l,resu1.values['mu_0'],resu1.values['sig_0'],resu1.values['amp_0']) 
+gaus2 = gaussian(l,resu1.values['mu_1'],resu1.values['sig_1'],resu1.values['amp_1'])
+gaus3 = gaussian(l,resu1.values['mu_2'],resu1.values['sig_2'],resu1.values['amp_2'])
+gaus4 = gaussian(l,resu1.values['mu_3'],resu1.values['sig_3'],resu1.values['amp_3'])
+gaus5 = gaussian(l,resu1.values['mu_4'],resu1.values['sig_4'],resu1.values['amp_4'])
+
+################################################ PLOT ######################################################
 plt.close()
 # MAIN plot
 fig1   = plt.figure(1)
-frame1 = fig1.add_axes((.1,.3,.8,.6)) #xstart, ystart, xend, yend [units are fraction of the image frame, from bottom left corner]
+frame1 = fig1.add_axes((.1,.3,.8,.6)) 	     # xstart, ystart, xend, yend [units are fraction of the image frame, from bottom left corner]
 plt.plot(l,data_cor)			     # Initial data
-plt.plot(newx1,newy1,'k-')		# Selected data to do the fit
-plt.plot(newx1,gaussian(newx1,resu.params['mu'],resu.params['sigm'],resu.params['amp']),'g--')
-frame1.set_xticklabels([]) #Remove x-tic labels for the first frame
-plt.plot(l,funcgauslin(l,resu1.params['mu'],resu1.params['sigm'],resu1.params['amp']),'r--')
+plt.plot(l,funcgauslin(l,resu1.values['slope'],resu1.values['intc'],
+		       resu1.values['mu_0'],resu1.values['sig_0'],resu1.values['amp_0'],
+		       resu1.values['mu_1'],resu1.values['sig_1'],resu1.values['amp_1'],
+		       resu1.values['mu_2'],resu1.values['sig_2'],resu1.values['amp_2'],
+		       resu1.values['mu_3'],resu1.values['sig_3'],resu1.values['amp_3'],
+		       resu1.values['mu_4'],resu1.values['sig_4'],resu1.values['amp_4']),'r--')
+plt.plot(l,gaus1,'k--',label='Gauss 1')
+plt.plot(l,gaus2,'g--',label='Gauss 2')
+plt.plot(l,gaus3,'c--',label='Gauss 3')
+plt.plot(l,gaus4,'y--',label='Gauss 4')
+plt.plot(l,gaus5,'m--',label='Gauss 5')
+plt.plot(l,(resu1.values['slope']*l+resu1.values['intc']),'k-.',label='Linear fit')
+plt.plot(l[std0:std1],data_cor[std0:std1],'g')	# Zone where the stddev is calculated
+
+frame1.set_xticklabels([]) 			# Remove x-tic labels for the first frame
 plt.ylabel('Flux (x10$^{-14} \mathrm{erg/s/cm^{2} / \AA}$)')
 plt.xlim(l[0],l[-1])
 
 # Residual plot
 frame2 = fig1.add_axes((.1,.1,.8,.2))
-plt.plot(newx1,resid,color='grey')		# Main
+plt.plot(l,resu1.residual,color='grey')		# Main
 plt.xlabel('Wavelength ($\AA$)')
+plt.ylabel('Residuals')
 plt.xlim(l[0],l[-1])
 plt.plot(l,np.zeros(len(l)),'k--')         	# Line around zero
 plt.plot(l,np.zeros(len(l))+3*stadev,'k--')	# 3 sigma upper limit
