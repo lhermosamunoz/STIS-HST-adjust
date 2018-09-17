@@ -24,3 +24,5 @@ Use pretty_print() for customizing the output of the fit and print it in an easi
     precision (int, optional) – Number of digits to be printed after floating point.
     fmt ({'g', 'e', 'f'}, optional) – Single-character numeric formatter. Valid values are: ‘f’ floating point, ‘g’ floating point and  exponential, or ‘e’ exponential.
     columns (list of str, optional) – List of Parameter attribute names to print.
+
+Also one can use print(fit_report(result)) for seeing all the results for the parameters, the correlations and the statistics.
