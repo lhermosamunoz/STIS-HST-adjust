@@ -96,7 +96,6 @@ l_SII_1  = 6716.
 l_SII_2  = 6731.
 
 
-#
 # Now redefine the zone to fit
 data_cor = data[2:-2]*10**14
 l        = l[2:-2]
@@ -142,7 +141,6 @@ amp_4 = max(newy5)
 slope = 0.
 intc  = data_cor[0]
 
-
 ###################################### Start the fit and the MODEL ###############################################
 
 # First we have to initialise the model by doing
@@ -152,7 +150,6 @@ comp_mod   = lmfit.Model(funcgauslin)
 # Now we define the initial guesses and the constraints
 params = lmfit.Parameters()
 # add with tuples: (NAME VALUE VARY MIN  MAX  EXPR  BRUTE_STEP)
-# add a sequence of Parameters
 ab = lmfit.Parameter('slope', value=slope)
 bc = lmfit.Parameter('intc', value=intc)
 cd = lmfit.Parameter('mu_0', value=mu_0)
@@ -170,6 +167,7 @@ no = lmfit.Parameter('amp_3', value=amp_3)
 op = lmfit.Parameter('mu_4', value=mu_4,expr='mu_0*(6548./6731.)')
 pq = lmfit.Parameter('sig_4', value=sig_4,expr='sig_0')
 qr = lmfit.Parameter('amp_4', value=amp_4)
+# add a sequence of Parameters
 params.add_many(ab,bc,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr)
 
 # and make the fit using lmfit
@@ -226,7 +224,7 @@ frame1.set_xticklabels([]) 			# Remove x-tic labels for the first frame
 plt.ylabel('Flux (x10$^{-14} \mathrm{erg/s/cm^{2} / \AA}$)')
 plt.xlim(l[0],l[-1])
 
-# Residual plot
+# RESIDUAL plot
 frame2 = fig1.add_axes((.1,.1,.8,.2))
 plt.plot(l,resu1.residual,color='grey')		# Main
 plt.xlabel('Wavelength ($\AA$)')
