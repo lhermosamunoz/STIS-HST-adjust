@@ -120,22 +120,26 @@ So the following trick is needed to use it
 nparams    = 8
 parinf     = []
 dictionary = {}
-for i in xrange(0,nparams):		# To initialize all the individual dictionaries separately
-    dictionary['data'] = p3[i]
+for i in xrange(0,nparams):		        # To initialize all the individual dictionaries separately
+    dictionary['data'] = p3[i]       # We give to each dictionary the initial values for each parameter
     parinf.append(dictionary.copy())
 
-parinf[6]['tied'] = p3[3]
-parinf[5]['tied'] = p3[2]*(l_SII_1/l_SII_2)
+parinf[6]['tied'] = p3[3]                   # Put constraint that the sigma should be the same for both gaussians
+parinf[5]['tied'] = p3[2]*(l_SII_1/l_SII_2) # Put a constraint on the differences between wavelengths of the lines
 
 
-
-# Make the fit using mpfit
+# Make the fit using mpfit for one gaussian and for the combination of as many gaussians as wanted with
+# a linear fit for the continuum
 m  = mpfit.mpfit(usefunctions.gausfunct, p0,functkw=fa)
-m3 = mpfit.mpfit(usefunctions.gaus3funct, p3,functkw=fa3#,parinfo = parinf)
+m3 = mpfit.mpfit(usefunctions.gaus3funct, p3,functkw=fa3,parinfo = parinf)
 
 # Calculate the residuals of the data
 resid = newy1 - usefunctions.gaussian(newx1,m.params)
 
+# In order to determine if the lines need one more gaussian to be fit correctly, we apply the condition
+# that the std dev of the continuum should be higher than 3 times the std dev of the residuals of the 
+# fit of the line. We have to calculate the stddev of the continuum in a place where there are no 
+# lines (True for all AGNs spectra in this range).
 # Calculate the standard deviation of a part of the continuum without lines nor contribution of them
 std0   = np.where(l>6450.)[0][0]
 std1   = np.where(l<6500.)[0][-1]
@@ -151,7 +155,7 @@ plt.close()
 # MAIN plot
 fig1   = plt.figure(1)
 frame1 = fig1.add_axes((.1,.3,.8,.6)) #xstart, ystart, xend, yend [units are fraction of the image frame, from bottom left corner]
-plt.plot(l,data_cor)			# Initial data
+plt.plot(l,data_cor)			     # Initial data
 plt.plot(newx1,newy1,'k-')		# Selected data to do the fit
 plt.plot(newx1,usefunctions.gaussian(newx1,m.params),'g--')
 frame1.set_xticklabels([]) #Remove x-tic labels for the first frame
@@ -164,7 +168,7 @@ frame2 = fig1.add_axes((.1,.1,.8,.2))
 plt.plot(newx1,resid,color='grey')		# Main
 plt.xlabel('Wavelength ($\AA$)')
 plt.xlim(l[0],l[-1])
-plt.plot(l,np.zeros(len(l)),'k--')	# Line around zero
+plt.plot(l,np.zeros(len(l)),'k--')         	# Line around zero
 plt.plot(l,np.zeros(len(l))+3*stadev,'k--')	# 3 sigma upper limit
 plt.plot(l,np.zeros(len(l))-3*stadev,'k--')	# 3 sigma down limit
 
