@@ -14,6 +14,6 @@ It can be downloaded in a github repository and use it as mpfit.py, or it is als
   # LMFIT
 LMfit-py provides a Least-Squares Minimization routine and class with a simple, flexible approach to parameterizing a model for fitting to data.
 
-This is a package similar to mpfit but seems to work better in python. Now I'm implementing a code in which the adjustment is made with the lmpfit to see how it works. Again, it can be used either downloading the file from the github repository, or  simply with pip install lmfit, as it is a pure python package.
+This is a package similar to mpfit but seems to work better in python. In the code the adjustment is made with the lmpfit. Again, it can be used either downloading the file from the github repository, or  simply with pip install lmfit, as it is a pure python package.
 
 The useful thing here is that the parameters can be named and the code automatically differenciate between the constants and the variables. Named parameters can be held fixed or freely adjusted in the fit, or held between lower and upper bounds. In addition, parameters can be constrained as a simple mathematical expression of other Parameters.
