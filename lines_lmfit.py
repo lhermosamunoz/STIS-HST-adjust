@@ -186,6 +186,21 @@ elif meth == 'M1':
     qr = lmfit.Parameter('amp_4', value=amp_4,expr='amp_2*(1./3.)')
 elif meth == 'M2':
     print('No OI lines in this spectra and this method does not work. Please select another one')
+    cd = lmfit.Parameter('mu_0', value=mu_0)
+    de = lmfit.Parameter('sig_0', value=sig_0)
+    ef = lmfit.Parameter('amp_0', value=amp_0)
+    fg = lmfit.Parameter('mu_1', value=mu_1,expr='mu_0*(6716./6731.)')
+    gh = lmfit.Parameter('sig_1', value=sig_1,expr='sig_0')
+    hi = lmfit.Parameter('amp_1', value=amp_1)
+    ij = lmfit.Parameter('mu_2', value=mu_2)				# It should be attached to the [OI] lines when available!!
+    jk = lmfit.Parameter('sig_2', value=sig_2)				# It should be attached to the [OI] lines when available!!
+    kl = lmfit.Parameter('amp_2', value=amp_2)				# It should be attached to the [OI] lines when available!!
+    lm = lmfit.Parameter('mu_3', value=mu_3,expr='mu_2*(6563./6584.)')		# It should be attached to the [OI] lines when available!!
+    mn = lmfit.Parameter('sig_3', value=sig_3,expr='sig_2')			# It should be attached to the [OI] lines when available!!
+    no = lmfit.Parameter('amp_3', value=amp_3)					# It should be attached to the [OI] lines when available!!
+    op = lmfit.Parameter('mu_4', value=mu_4,expr='mu_2*(6548./6584.)')		# It should be attached to the [OI] lines when available!!
+    pq = lmfit.Parameter('sig_4', value=sig_4,expr='sig_2')			# It should be attached to the [OI] lines when available!!
+    qr = lmfit.Parameter('amp_4', value=amp_4,expr='amp_2*(1./3.)')		# It should be attached to the [OI] lines when available!!
 
 # add a sequence of Parameters
 params.add_many(ab,bc,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr)
@@ -232,7 +247,6 @@ print(resu1.params['sig_4'])
 print(resu1.params['amp_4'])
 print('')
 print('The chi-square of the fit is: {:.5f}'.format(resu1.chisqr))
-print('The reduced chi-square of the fit is: {:.5f}'.format(resu1.redchi))
 print('')
 print('The standard deviation of the continuum is: {:.5f}  and the one of the SII line is: {:.5f}'.format(stadev, std_line))
 print('The condition needs to be std_line < 3*std_cont --> '+str(std_line)+'< 3*'+str(stadev))
