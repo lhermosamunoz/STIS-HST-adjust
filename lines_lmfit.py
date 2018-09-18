@@ -166,7 +166,7 @@ mn = lmfit.Parameter('sig_3', value=sig_3,expr='sig_0')
 no = lmfit.Parameter('amp_3', value=amp_3)
 op = lmfit.Parameter('mu_4', value=mu_4,expr='mu_0*(6548./6731.)')
 pq = lmfit.Parameter('sig_4', value=sig_4,expr='sig_0')
-qr = lmfit.Parameter('amp_4', value=amp_4)
+qr = lmfit.Parameter('amp_4', value=amp_4,expr='amp_2*(1./3.)')
 # add a sequence of Parameters
 params.add_many(ab,bc,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr)
 
@@ -181,6 +181,9 @@ resu1 = comp_mod.fit(data_cor,params,x=l)
 std0   = np.where(l>6450.)[0][0]
 std1   = np.where(l<6500.)[0][-1]
 stadev = np.std(data_cor[std0:std1])
+liminf   = np.where(l>6755.)[0][0]	# Strongest SII line
+limsup   = np.where(l<6780.)[0][-1]
+std_line = np.std(resu1.residual[liminf:limsup])
 
 
 #############################################################################################################
@@ -210,6 +213,9 @@ print(resu1.params['amp_4'])
 print('')
 print('The chi-square of the fit is: {:.5f}'.format(resu1.chisqr))
 print('The reduced chi-square of the fit is: {:.5f}'.format(resu1.redchi))
+print('')
+print('The standard deviation of the continuum is: {:.5f}  and the one of the SII line is: {:.5f}'.format(stadev, std_line))
+print('The condition needs to be std_line < 3*std_cont --> '+str(std_line)+'< 3*'+str(stadev))
 
 # Now we create and plot the individual gaussians of the fit
 gaus1 = gaussian(l,resu1.values['mu_0'],resu1.values['sig_0'],resu1.values['amp_0']) 
@@ -237,6 +243,7 @@ plt.plot(l,gaus4,'y--',label='Gauss 4')
 plt.plot(l,gaus5,'m--',label='Gauss 5')
 plt.plot(l,(resu1.values['slope']*l+resu1.values['intc']),'k-.',label='Linear fit')
 plt.plot(l[std0:std1],data_cor[std0:std1],'g')	# Zone where the stddev is calculated
+plt.plot(l[liminf:limsup],data_cor[liminf:limsup],'y')	# Zone where the line stddev is calculated
 
 frame1.set_xticklabels([]) 			# Remove x-tic labels for the first frame
 plt.ylabel('Flux (x10$^{-14} \mathrm{erg/s/cm^{2} / \AA}$)')
