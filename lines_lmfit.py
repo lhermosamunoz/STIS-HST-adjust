@@ -95,7 +95,6 @@ l_NII_2  = 6584.
 l_SII_1  = 6716.
 l_SII_2  = 6731.
 
-
 # Now redefine the zone to fit
 data_cor = data[2:-2]*10**14
 l        = l[2:-2]
@@ -152,21 +151,42 @@ params = lmfit.Parameters()
 # add with tuples: (NAME VALUE VARY MIN  MAX  EXPR  BRUTE_STEP)
 ab = lmfit.Parameter('slope', value=slope)
 bc = lmfit.Parameter('intc', value=intc)
-cd = lmfit.Parameter('mu_0', value=mu_0)
-de = lmfit.Parameter('sig_0', value=sig_0)
-ef = lmfit.Parameter('amp_0', value=amp_0)
-fg = lmfit.Parameter('mu_1', value=mu_1,expr='mu_0*(6716./6731.)')
-gh = lmfit.Parameter('sig_1', value=sig_1,expr='sig_0')
-hi = lmfit.Parameter('amp_1', value=amp_1)
-ij = lmfit.Parameter('mu_2', value=mu_2,expr='mu_0*(6584./6731.)')
-jk = lmfit.Parameter('sig_2', value=sig_2,expr='sig_0')
-kl = lmfit.Parameter('amp_2', value=amp_2)
-lm = lmfit.Parameter('mu_3', value=mu_3,expr='mu_0*(6563./6731.)')
-mn = lmfit.Parameter('sig_3', value=sig_3,expr='sig_0')
-no = lmfit.Parameter('amp_3', value=amp_3)
-op = lmfit.Parameter('mu_4', value=mu_4,expr='mu_0*(6548./6731.)')
-pq = lmfit.Parameter('sig_4', value=sig_4,expr='sig_0')
-qr = lmfit.Parameter('amp_4', value=amp_4,expr='amp_2*(1./3.)')
+meth = input('Which method do you want to use? (options are S, M1 or M2): ')	# Method to fit: S/O/M1/M2
+if meth == 'S':
+    cd = lmfit.Parameter('mu_0', value=mu_0)
+    de = lmfit.Parameter('sig_0', value=sig_0)
+    ef = lmfit.Parameter('amp_0', value=amp_0)
+    fg = lmfit.Parameter('mu_1', value=mu_1,expr='mu_0*(6716./6731.)')
+    gh = lmfit.Parameter('sig_1', value=sig_1,expr='sig_0')
+    hi = lmfit.Parameter('amp_1', value=amp_1)
+    ij = lmfit.Parameter('mu_2', value=mu_2,expr='mu_0*(6584./6731.)')
+    jk = lmfit.Parameter('sig_2', value=sig_2,expr='sig_0')
+    kl = lmfit.Parameter('amp_2', value=amp_2)
+    lm = lmfit.Parameter('mu_3', value=mu_3,expr='mu_0*(6563./6731.)')
+    mn = lmfit.Parameter('sig_3', value=sig_3,expr='sig_0')
+    no = lmfit.Parameter('amp_3', value=amp_3)
+    op = lmfit.Parameter('mu_4', value=mu_4,expr='mu_0*(6548./6731.)')
+    pq = lmfit.Parameter('sig_4', value=sig_4,expr='sig_0')
+    qr = lmfit.Parameter('amp_4', value=amp_4,expr='amp_2*(1./3.)')
+elif meth == 'M1':
+    cd = lmfit.Parameter('mu_0', value=mu_0)
+    de = lmfit.Parameter('sig_0', value=sig_0)
+    ef = lmfit.Parameter('amp_0', value=amp_0)
+    fg = lmfit.Parameter('mu_1', value=mu_1,expr='mu_0*(6716./6731.)')
+    gh = lmfit.Parameter('sig_1', value=sig_1,expr='sig_0')
+    hi = lmfit.Parameter('amp_1', value=amp_1)
+    ij = lmfit.Parameter('mu_2', value=mu_2,expr='mu_0*(6584./6731.)')
+    jk = lmfit.Parameter('sig_2', value=sig_2,expr='sig_0')
+    kl = lmfit.Parameter('amp_2', value=amp_2)
+    lm = lmfit.Parameter('mu_3', value=mu_3)		# It should be attached to the [OI] lines when available!!
+    mn = lmfit.Parameter('sig_3', value=sig_3)		# It should be attached to the [OI] lines when available!!
+    no = lmfit.Parameter('amp_3', value=amp_3)
+    op = lmfit.Parameter('mu_4', value=mu_4,expr='mu_0*(6548./6731.)')
+    pq = lmfit.Parameter('sig_4', value=sig_4,expr='sig_0')
+    qr = lmfit.Parameter('amp_4', value=amp_4,expr='amp_2*(1./3.)')
+elif meth == 'M2':
+    print('No OI lines in this spectra and this method does not work. Please select another one')
+
 # add a sequence of Parameters
 params.add_many(ab,bc,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr)
 
