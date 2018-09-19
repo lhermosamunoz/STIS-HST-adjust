@@ -110,6 +110,7 @@ liminf   = np.where(l>6720.)[0][0]
 limsup   = np.where(l<6755.)[0][-1]
 newx2    = l[liminf:limsup+1]
 newy2    = data_cor[liminf:limsup+1]
+sig_1 = 1.0
 mu_1  = newx2[np.argmax(newy2)]
 amp_1 = max(newy2)
 
@@ -117,6 +118,7 @@ liminf   = np.where(l>6610.)[0][0]
 limsup   = np.where(l<6620.)[0][-1]
 newx3    = l[liminf:limsup+1]
 newy3    = data_cor[liminf:limsup+1]
+sig_2 = 1.0
 mu_2  = newx3[np.argmax(newy3)]
 amp_2 = max(newy3)
 
@@ -124,6 +126,7 @@ liminf   = np.where(l>6590.)[0][0]
 limsup   = np.where(l<6600.)[0][-1]
 newx4    = l[liminf:limsup+1]
 newy4    = data_cor[liminf:limsup+1]
+sig_3 = 1.0
 mu_3  = newx4[np.argmax(newy4)]
 amp_3 = max(newy4)
 
@@ -131,6 +134,7 @@ liminf   = np.where(l>6500.)[0][0]
 limsup   = np.where(l<6580.)[0][-1]
 newx5    = l[liminf:limsup+1]
 newy5    = data_cor[liminf:limsup+1]
+sig_4 = 1.
 mu_4  = newx5[np.argmax(newy5)]
 amp_4 = max(newy5)
 
@@ -269,11 +273,11 @@ plt.plot(l,funcgauslin(l,resu1.values['slope'],resu1.values['intc'],
 		       resu1.values['mu_2'],resu1.values['sig_2'],resu1.values['amp_2'],
 		       resu1.values['mu_3'],resu1.values['sig_3'],resu1.values['amp_3'],
 		       resu1.values['mu_4'],resu1.values['sig_4'],resu1.values['amp_4']),'r--')
-plt.plot(l,gaus1,'k--',label='Gauss 1')
-plt.plot(l,gaus2,'g--',label='Gauss 2')
-plt.plot(l,gaus3,'c--',label='Gauss 3')
-plt.plot(l,gaus4,'y--',label='Gauss 4')
-plt.plot(l,gaus5,'m--',label='Gauss 5')
+plt.plot(l,gaus1,'c--')
+plt.plot(l,gaus2,'c--')
+plt.plot(l,gaus3,'c--')
+plt.plot(l,gaus4,'c--')
+plt.plot(l,gaus5,'c--',label='N')
 plt.plot(l,(resu1.values['slope']*l+resu1.values['intc']),'k-.',label='Linear fit')
 plt.plot(l[std0:std1],data_cor[std0:std1],'g')	# Zone where the stddev is calculated
 plt.plot(l[liminf:limsup],data_cor[liminf:limsup],'y')	# Zone where the line stddev is calculated
