@@ -219,6 +219,11 @@ resu1 = comp_mod.fit(data_cor,params,x=l)
 std0   = np.where(l>6450.)[0][0]
 std1   = np.where(l<6500.)[0][-1]
 stadev = np.std(data_cor[std0:std1])
+#
+# For the lines the stddev should be calculates:
+#     - In SII/OI for the S/O methods.
+#     - In Halpha/NII in order to look for a broad Halpha component.
+#     - In both [OI] and [SII] with the mix models.
 liminf   = np.where(l>6755.)[0][0]	# Strongest SII line
 limsup   = np.where(l<6780.)[0][-1]
 std_line = np.std(resu1.residual[liminf:limsup])
