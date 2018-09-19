@@ -12,14 +12,13 @@ from lmfit.printfuncs import fit_report
 
 ######################### Define the PATHS to the data and extract the spectra ###################################
 #
-#path      = input('Path to the data fits? (ex. "/mnt/data/lhermosa/HLA_data/NGC.../o.../ext_spec_crop.fits"): ')
+path      = input('Path to the data fits? (ex. "/mnt/data/lhermosa/HLA_data/NGC.../o.../ext_spec_crop.fits"): ')
 #hdulist   = fits.open('/mnt/data/lhermosa/HLA_data/NGC3245/O57205030_STISCCD_G750M/ext_spec_combin_crop.fits')	#path)	# Open the fit file to read the information
-hdulist   = fits.open('/mnt/data/lhermosa/HLA_data/NGC4736/o67110040_STISCCD_G750M/ext_spec_crop.fits')	#path)	# Open the fit file to read the information
+hdulist   = fits.open(path)		# Open the fit file to read the information
 hdu       = hdulist[0]			# Extract the extension in which the spectra is saved
 data      = hdu.data			# Save the data (i.e. the values of the flux per pixel)
 data_head = hdu.header			# Save the header of the data
 hdulist.close()				# Close the file as we don't need it anymore
-
 
 
 ###################################### Define the FUNCTIONS #####################################################
