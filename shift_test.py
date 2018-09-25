@@ -4,8 +4,8 @@ Import to shift the individual spectra and then combine them individually
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-#from glob import glob
-#from pyraf import iraf
+from glob import glob
+from pyraf import iraf
 from astropy.io import fits
 
 
@@ -43,7 +43,7 @@ RA_aper, DEC_aper, PA_aper = np.array([]), np.array([]), np.array([])
 platesc, exptime           = np.array([]), np.array([])
 minwave,filename           = np.array([]), np.array([])
 
-for i in np.sort(glob(path+'NGC*/*/*x2d.fits')):
+for i in np.sort(glob(path+'NGC*/shifts/*x2d.fits')):
 	var = getHeaderVar(i,'TARGNAME')		# Select the galaxy and get the data from its header
 	if var[0]==targname:
 		platesc  = np.append(platesc,getHeaderVar(i,'PLATESC')/3600.)	# degree/pix
@@ -121,18 +121,48 @@ for id1 in range(len(ixfinal)):
 	    shift_ra  = RA_temp[id2]-refra
 	    shift_dec = DEC_temp[id2]-refdec
 	    shift_temp.append([name_temp[id2],shift_ra/pltsc_temp[id2],shift_dec/pltsc_temp[id2],refpa])
-	    f = open(path+galname+'/shift_pix_'+targname+'_n'+str(id1)+'.txt','a')
-	    f.write('\n'+str(name_temp[id2])+' '+str(shift_ra)+' '+str(shift_dec)+' '+str(refpa))
-	    f.close()
+	    #f = open(path+galname+'/shift_pix_'+targname+'_n'+str(id1)+'.txt','a')
+	    #f.write('\n'+str(shift_ra)+' '+str(shift_dec)+' '+str(refpa)+' '+str(name_temp[id2]))
+	    #f.close()
 	else: 
 	    print('The element '+str(ixfinal[id1][id2])+' has been excluded because it has a min wavelength larger or smaller than 6000.-7000. angstroms')
 	    print('In the vector corresponding to these images, the PA will be replaced by 0.')
 	    shift_temp.append([name_temp[id2],0.,0.,0.])
-	    f = open(path+galname+'/shift_pix_'+targname+'_lam'+str(lam_temp[id2])+'_n'+str(id1)+'.txt','a')
-	    f.write('\n'+str(name_temp[id2])+' '+str(0.)+' '+str(0.)+' '+str(refpa))
-	    f.close()
+	    #f = open(path+galname+'/shift_pix_'+targname+'_lam'+str(lam_temp[id2])+'_n'+str(id1)+'.txt','a')
+	    #f.write('\n'+str(0.)+' '+str(0.)+' '+str(refpa)+' '+str(name_temp[id2]))
+	    #f.close()
     shift_fin.append(shift_temp)
     shift_temp = []
 
 
+##########################################################################################################################################################
+######################################################### IMSHIFT + IMCOMBINE ############################################################################
+##########################################################################################################################################################
+# 
+# Perform the shifts with iraf/pyraf
+# We need the imshift task: imshift input output xshift yshift (or file with shifts in cols 1 & 2)
+# The initial list will be *x2d.fits[1] and the output list will be *shift.fits
+# 
+list_temp  = []
+list_total = []
+iraf.cd(path+galname+'/shifts')
+for index in range(len(shift_fin)):
+    arr1 = shift_fin[index]
+    for index2 in range(len(arr1)):
+	i_nam = arr1[index2][0]         # Initial name for imshift
+	xs    = arr1[index2][1]
+	ys    = arr1[index2][2]
+	posa  = arr1[index2][3]
+	list_in  = i_nam.replace('.fits','.fits[1,overwrite+]')
+	list_ot  = list_in.replace('x2d','shift')
+	list_out = list_ot.replace('.fits[1,overwrite+]','.fits')
+	list_total.append(list_temp)
+	if not os.path.exists(list_out):
+	    iraf.imshift(input=list_in,output=list_out,xshift=xs,yshift=ys)
+	    print('File '+str(i_nam)+' changed to '+str(list_out)+'!')
 
+
+
+
+
+iraf.cd(path+'scripts')
