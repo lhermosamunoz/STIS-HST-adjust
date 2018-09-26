@@ -9,12 +9,12 @@ from pyraf import iraf
 from astropy.io import fits
 
 
-####### Define PATHS #######
+############### Define PATHS ###############
 path      = '/mnt/data/lhermosa/HLA_data/'
 targname  = 'NGC5055'					# From the header. Change this for each case!
 galname   = 'NGC5055'					# Change this for each case!
 
-####### Define FUNCTIONS ######
+############### Define FUNCTIONS ###########
 def getHeaderVar(filePath,*varList):
 	#get variables from FITS header
 	fileFits = fits.open(filePath)
@@ -134,10 +134,7 @@ for id1 in range(len(ixfinal)):
     shift_fin.append(shift_temp)
     shift_temp = []
 
-
-##########################################################################################################################################################
 ######################################################### IMSHIFT + IMCOMBINE ############################################################################
-##########################################################################################################################################################
 # 
 # Perform the shifts with iraf/pyraf
 # We need the imshift task: imshift input output xshift yshift (or file with shifts in cols 1 & 2)
@@ -156,13 +153,28 @@ for index in range(len(shift_fin)):
 	list_in  = i_nam.replace('.fits','.fits[1,overwrite+]')
 	list_ot  = list_in.replace('x2d','shift')
 	list_out = list_ot.replace('.fits[1,overwrite+]','.fits')
-	list_total.append(list_temp)
+	list_temp.append(list_out)
 	if not os.path.exists(list_out):
 	    iraf.imshift(input=list_in,output=list_out,xshift=xs,yshift=ys)
 	    print('File '+str(i_nam)+' changed to '+str(list_out)+'!')
+    list_total.append(list_temp)
+    list_temp = []
 
+# 
+# Now we have to combine the images as long as they have not been created yet
+# We use the IRAF task imcombine
+# The rejection algorithm would be ccdclip, with weights for combining (TEXPTIME in headers), readnoise = 4.32 and gain = 1.
+# 
+if os.path.exists('*comb.fits'): print('Combined images present in this folder. Imcombine will not be applied. Please, delete them if needed! ')
+if not os.path.exists('*comb.fits'):
+    for index3 in range(len(list_total)):
+    	arr2 = list_total[index3]
+    	if len(arr2) == 1:
+	    iraf.imcopy(arr2[0],arr2[0].replace('_shift','_comb'))
+	else:
+	    name_output = arr2[0].replace('_shift','_comb')
+	    iraf.imcombine(input=arr2,output=name_output,combine='median',reject='ccdclip',weight='exposure',expname='TEXPTIME',rdnoise=4.34,gain=1.)
+	    print('Images '+str(arr2)+' combined succesfully!')
 
+iraf.cd(path+'scripts')	
 
-
-
-iraf.cd(path+'scripts')
