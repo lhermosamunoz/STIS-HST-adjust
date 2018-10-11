@@ -48,7 +48,7 @@ def linear(x,slope,intc):
 
 
 # Function to create the gaussian and the linear fit
-def funcgauslin(x,slope,intc,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,mu_3,sig_3,amp_3,mu_4,sig_4,amp_4,mu_5,sig_5,amp_5,mu_6,sig_6,amp_6):
+def funcgauslin(x,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,mu_3,sig_3,amp_3,mu_4,sig_4,amp_4,mu_5,sig_5,amp_5,mu_6,sig_6,amp_6):
     '''
     Function to fit the spectra to a gaussian + linear.
 
@@ -62,7 +62,7 @@ def funcgauslin(x,slope,intc,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,
 	    3. amplitude
     '''
     fy = np.zeros_like(x)
-    fy = fy + (slope*x+intc)
+    fy = fy + new_slop*x + new_intc
     fy = fy + gaussian(x,mu_0,sig_0,amp_0)
     fy = fy + gaussian(x,mu_1,sig_1,amp_1)
     fy = fy + gaussian(x,mu_2,sig_2,amp_2)
@@ -187,22 +187,42 @@ mu_6  = newx7[np.argmax(newy7)]
 amp_6 = max(newy7)
 
 #
-# Start the parameters for the LINEAR fit
+# Start the parameters for the LINEAR fit and create the continuum zones to fit (newx)
 slope = 0.
-intc  = data_cor[0]
+intc = data_cor[0]
+
+newl = l[0]		# Redefine the lambda zone with the first and last point and the zones in between OI2-NII1 and NII2-SII1
+zone_O_N = l[np.where(l<l14)[0][-1]+5:np.where(l>l9)[0][0]-5]
+zone_N_S = l[np.where(l<l6)[0][-1]+5:np.where(l>l3)[0][0]-5]
+newl = np.append(newl,zone_O_N)
+newl = np.append(newl,zone_N_S)
+newl = np.append(newl,l[-1])
+# now we do the same but with the flux data (y vector)
+newflux = data_cor[0]
+zon_O_N = data_cor[np.where(l<l14)[0][-1]+5:np.where(l>l9)[0][0]-5]
+zon_N_S = data_cor[np.where(l<l6)[0][-1]+5:np.where(l>l3)[0][0]-5]
+newflux = np.append(newflux,zon_O_N)
+newflux = np.append(newflux,zon_N_S)
+newflux = np.append(newflux,data_cor[-1])
 
 
 ###################################### Start the fit and the MODEL ###############################################
 
 # First we have to initialise the model by doing
 sing_mod = lmfit.Model(gaussian)
+lin_mod = lmfit.Model(linear)
 comp_mod = lmfit.Model(funcgauslin)
+
+# We make the linear fit only with some windows of the spectra, and calculate the line to introduce it in the formula
+linresu  = lin_mod.fit(newflux,slope=slope,intc=intc,x=newl)
+new_slop = linresu.params['slope']
+new_intc = linresu.params['intc']
+rect = new_slop*l + new_intc
 
 # Now we define the initial guesses and the constraints
 params = lmfit.Parameters()
 # add with tuples: (NAME VALUE VARY MIN  MAX  EXPR  BRUTE_STEP)
-ab = lmfit.Parameter('slope', value=slope)
-bc = lmfit.Parameter('intc', value=intc)
+#ab = lmfit.Parameter('rect', value=lin_fit)
 meth = input('Which method do you want to use? (options are S, O, M1 or M2): ')	# Method to fit: S/O/M1/M2
 if meth == 'S':
     cd = lmfit.Parameter('mu_0', value=mu_0)
@@ -226,7 +246,7 @@ if meth == 'S':
     uv = lmfit.Parameter('mu_6', value=mu_6,expr='mu_0*(6363./6731.)')
     vw = lmfit.Parameter('sig_6', value=sig_6,expr='sig_0')
     wy = lmfit.Parameter('amp_6', value=amp_6,expr='amp_5*(1./3.)')
-    params.add_many(ab,bc,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,rs,st,tu,uv,vw,wy)
+    params.add_many(cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,rs,st,tu,uv,vw,wy)
 elif meth == 'O':
     cd = lmfit.Parameter('mu_0', value=mu_0,expr='mu_5*(6731./6300.)')
     de = lmfit.Parameter('sig_0', value=sig_0,expr = 'sig_5')
@@ -297,7 +317,7 @@ elif meth == 'M2':
     vw = lmfit.Parameter('sig_6', value=sig_6,expr='sig_5')
     wy = lmfit.Parameter('amp_6', value=amp_6,expr='amp_5*(1./3.)')
 
-params.add_many(ab,bc,rs,st,tu,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,uv,vw,wy)
+params.add_many(rs,st,tu,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,uv,vw,wy)
 
 # and make the fit using lmfit
 resu  = sing_mod.fit(data_cor,mu=mu_3,sigm=sig_3*1.5,amp=amp_3/3.,x=l)
@@ -337,7 +357,7 @@ std_o2 = np.std(resu1.residual[np.where(l<l13)[0][-1]:np.where(l>l14)[0][-1]])
 # Now we create the individual gaussians in order to plot and print the results
 n = 0
 print('				RESULTS OF THE FIT: ')
-print('Linear fit equation: {:.5f}*x + {:.5f}'.format(resu1.values['slope'], resu1.values['intc']))
+print('Linear fit equation: {:.5f}*x + {:.5f}'.format(linresu.values['slope'], linresu.values['intc']))
 print('')
 print('The rest of the results can be displayed all together with resu1.params; the data can be accesed with resu1.values['']')
 print(resu1.params['mu_0'])
@@ -395,8 +415,7 @@ plt.close()
 fig1   = plt.figure(1)
 frame1 = fig1.add_axes((.1,.3,.8,.6))	 	# xstart, ystart, xend, yend [units are fraction of the image frame, from bottom left corner]
 plt.plot(l,data_cor)				# Initial data
-plt.plot(l,funcgauslin(l,resu1.values['slope'],resu1.values['intc'],
-		       resu1.values['mu_0'],resu1.values['sig_0'],resu1.values['amp_0'],
+plt.plot(l,funcgauslin(l,resu1.values['mu_0'],resu1.values['sig_0'],resu1.values['amp_0'],
 		       resu1.values['mu_1'],resu1.values['sig_1'],resu1.values['amp_1'],
 		       resu1.values['mu_2'],resu1.values['sig_2'],resu1.values['amp_2'],
 		       resu1.values['mu_3'],resu1.values['sig_3'],resu1.values['amp_3'],
@@ -410,7 +429,7 @@ plt.plot(l,gaus4,'c--')
 plt.plot(l,gaus5,'c--',label='N')
 plt.plot(l,gaus6,'c--')
 plt.plot(l,gaus7,'c--')
-plt.plot(l,(resu1.values['slope']*l+resu1.values['intc']),'k-.',label='Linear fit')
+plt.plot(l,(linresu.values['slope']*l+linresu.values['intc']),'k-.',label='Linear fit')
 plt.plot(l[std0:std1],data_cor[std0:std1],'g')		# Zone where the continuum stddev is calculated
 #plt.plot(l[liminf:limsup],data_cor[liminf:limsup],'g')	# Zone where the line stddev is calculated
 
