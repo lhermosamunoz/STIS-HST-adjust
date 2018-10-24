@@ -44,6 +44,21 @@ def linear(x,slope,intc):
     return y
 
 # Function to create the gaussian and the linear fit
+def twogaussian(x,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1):
+    '''
+    Function to fit 2 lines to a gaussian + linear.
+    The parameters to introduce have to be the initial guesses. 
+    x - values for the fit
+    params: 1. mu - mean of the distribution
+	    2. sigma - stddev
+	    3. amplitude
+    '''
+    y = np.zeros_like(x)
+    y = y + (new_slop*x+new_intc)
+    y = y + gaussian(x,mu_0,sig_0,amp_0) + gaussian(x,mu_1,sig_1,amp_1)
+    return y
+
+# Function to create the gaussian and the linear fit
 def funcgauslin(x,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,mu_3,sig_3,amp_3,mu_4,sig_4,amp_4):
     '''
     Function to fit the spectra to a gaussian + linear.
@@ -214,7 +229,8 @@ ampb = amp3/3.
 in_slope = 0.
 in_intc  = data_cor[0]
 
-newl = l[1]		# Redefine the lambda zone with the first and last point and the zones in between NII2-SII1 and SII2-final
+# Redefine the lambda zone with the first and last point and the zones in between NII2-SII1 and SII2-final
+newl = l[1]
 l11 = input('Aprox max wavelength of the spectra?: ')
 zone_S_fin = l[np.where(l<l2)[0][-1]+10:np.where(l>l11)[0][0]]
 zone_N_S = l[np.where(l<l6)[0][-1]+10:np.where(l>l3)[0][0]-10]
@@ -235,6 +251,7 @@ newflux = np.append(newflux,data_cor[-1])
 # First we have to initialise the model by doing
 sing_mod = lmfit.Model(gaussian)
 lin_mod = lmfit.Model(linear)
+sII_mod = lmfit.Model(twogaussian)
 comp_mod = lmfit.Model(funcgauslin)
 broad_mod = lmfit.Model(funcbroad)
 twocomp_mod = lmfit.Model(func2com)
@@ -293,10 +310,6 @@ params.add_many(cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr)
 paramsbH.add_many(ab,bc,rs,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr)
 params2c.add_many(cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,aaa,aab,aac,aad,aae,aaf,aag,aah,aai,aaj,aak,aal,aam,aan,aao)
 
-# X and y coordinates for the Halpha broad component
-l_halpha = l[np.where(l>l9)[0][0]-10:np.where(l<l6)[0][-1]+10]
-flux_halp = data_cor[np.where(l>l9)[0][0]-10:np.where(l<l6)[0][-1]+10]
-
 # and make the fit using lmfit
 resu  = sing_mod.fit(data_cor,mu=mu3,sigm=sig3,amp=amp3,x=l)
 resu1 = comp_mod.fit(data_cor,params,x=l)
@@ -341,23 +354,23 @@ std2_n2 = np.std(twocompresu.residual[np.where(l<l5)[0][-1]:np.where(l>l6)[0][-1
 std2_ha = np.std(twocompresu.residual[np.where(l<l7)[0][-1]:np.where(l>l8)[0][-1]])
 std2_n1 = np.std(twocompresu.residual[np.where(l<l9)[0][-1]:np.where(l>l10)[0][-1]])
 
-###############################################################################################################
-####################################### V calculus and F-test #################################################
-###############################################################################################################
+####################################################################################################################
+########################################## V calculus and F-test ###################################################
+####################################################################################################################
 #
 # In order to calculate the velocity of the lines, we have to determine the redshift and then apply it to 
-# follow the formula: v = cz. The error will be = v/lambda * error_lambda
+# follow the formula: v = cz. The error will be = c/lambda * error_lambda
 
 v_SII2 = v_luz*((resu1.values['mu_0']-l_SII_2)/l_SII_2)
 v_SII1 = v_luz*((resu1.values['mu_1']-l_SII_1)/l_SII_1)
 v_NII2 = v_luz*((resu1.values['mu_2']-l_NII_2)/l_NII_2)
 v_Halpha = v_luz*((resu1.values['mu_3']-l_Halpha)/l_Halpha)
 v_NII1 = v_luz*((resu1.values['mu_4']-l_NII_1)/l_NII_1)
-erv_SII2 = (v_SII2/resu1.values['mu_0'])#*err_mu0
-erv_SII1 = (v_SII1/resu1.values['mu_1'])#*err_mu1
-erv_NII2 = (v_NII2/resu1.values['mu_2'])#*err_mu2
-erv_Halpha = (v_Halpha/resu1.values['mu_3'])#*err_mu3
-erv_NII1 = (v_NII1/resu1.values['mu_4'])#*err_mu4
+erv_SII2 = (v_luz/l_SII_2)*resu1.params['mu_0'].stderr
+erv_SII1 = (v_luz/l_SII_1)*resu1.params['mu_1'].stderr
+erv_NII2 = (v_luz/l_NII_2)*resu1.params['mu_2'].stderr
+erv_Halpha = (v_luz/l_Halpha)*resu1.params['mu_3'].stderr
+erv_NII1 = (v_luz/l_NII_1)*resu1.params['mu_4'].stderr
 
 
 # We make an F-test to see if it is significant the presence of a second component in the lines. 
@@ -415,13 +428,13 @@ gaus2 = gaussian(l,resu1.values['mu_1'],resu1.values['sig_1'],resu1.values['amp_
 gaus3 = gaussian(l,resu1.values['mu_2'],resu1.values['sig_2'],resu1.values['amp_2'])
 gaus4 = gaussian(l,resu1.values['mu_3'],resu1.values['sig_3'],resu1.values['amp_3'])
 gaus5 = gaussian(l,resu1.values['mu_4'],resu1.values['sig_4'],resu1.values['amp_4'])
-
-# We determine the maximum flux of the fit for all the lines
 final_fit = funcgauslin(l,resu1.values['mu_0'],resu1.values['sig_0'],resu1.values['amp_0'],
 		       resu1.values['mu_1'],resu1.values['sig_1'],resu1.values['amp_1'],
 		       resu1.values['mu_2'],resu1.values['sig_2'],resu1.values['amp_2'],
 		       resu1.values['mu_3'],resu1.values['sig_3'],resu1.values['amp_3'],
 		       resu1.values['mu_4'],resu1.values['sig_4'],resu1.values['amp_4'])
+
+# We determine the maximum flux of the fit for all the lines
 maxN1 = max(final_fit[np.where(l>l9)[0][0]:np.where(l<l10)[0][-1]])
 maxHa = max(final_fit[np.where(l>l7)[0][0]:np.where(l<l8)[0][-1]])
 maxN2 = max(final_fit[np.where(l>l5)[0][0]:np.where(l<l6)[0][-1]])
@@ -441,7 +454,7 @@ plt.plot(l,gaus3,'c--')
 plt.plot(l,gaus4,'c--')
 plt.plot(l,gaus5,'c--',label='N')
 plt.plot(l,(linresu.values['slope']*l+linresu.values['intc']),'k-.',label='Linear fit')
-t=plt.text(6900.,resu1.values['amp_2']+2.4,r'$V_{SII_{2}}$ = '+ '{:.3f}'.format(v_SII2)+' km/s',size='large')			# print v
+t=plt.text(6900.,resu1.values['amp_2']+2.4,r'$V_{SII_{2}}$ = '+ '{:.3f} +- {:.3f}'.format(v_SII2,ervSII2)+' km/s',size='large')		# print v
 t=plt.text(6900.,resu1.values['amp_2']+1.6,r'$\sigma_{SII_{2}}$ = '+ '{:.3f}'.format(np.sqrt(resu1.values['sig_0']**2-sig_inst**2)),size='large')	# print sigma already in km/s
 t=plt.text(6900.,resu1.values['amp_2']+0.8,r'$F_{SII_{2}}$ = '+ '{:.3f}'.format(maxS2)+' $10^{-14}$',size='large')	# print sigma
 t=plt.text(6900.,resu1.values['amp_2'],r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(maxS1)+' $10^{-14}$',size='large')		# print sigma
@@ -470,7 +483,9 @@ plt.tick_params(axis='both', labelsize=12)
 plt.xlim(l[0],l[-1])
 plt.plot(l,np.zeros(len(l)),'k--')         	# Line around zero
 plt.plot(l,np.zeros(len(l))+3*stadev,'k--')	# 3 sigma upper limit
-plt.plot(l,np.zeros(len(l))-3*stadev,'k--') # 3 sigma down limit
+plt.plot(l,np.zeros(len(l))-3*stadev,'k--') 	# 3 sigma down limit
+
+plt.savefig(path+'adj_metS_1comp.png')
 
 ##########################################################################################################################
 ############################################# PRINT AND PLOT 1 COMP + HA #################################################
@@ -544,7 +559,7 @@ plt.plot(l,bgaus4,'c--')
 plt.plot(l,bgaus5,'c--',label='N')
 plt.plot(l,bgaus6,'m--',label='B')
 plt.plot(l,(linresu.values['slope']*l+linresu.values['intc']),'k-.',label='Linear fit')
-t=plt.text(6900.,broadresu.values['amp_2']+2.4,r'$V_{SII_{2}}$ = '+ '{:.3f}'.format(v_luz*((broadresu.values['mu_0']-l_SII_2)/l_SII_2))+' km/s',size='large')			# print v
+t=plt.text(6900.,broadresu.values['amp_2']+2.4,r'$V_{SII_{2}}$ = '+ '{:.3f}'.format(v_luz*((broadresu.values['mu_0']-l_SII_2)/l_SII_2))+' km/s',size='large')	# print v
 t=plt.text(6900.,broadresu.values['amp_2']+1.6,r'$\sigma_{SII_{2}}$ = '+ '{:.3f}'.format(np.sqrt(broadresu.values['sig_0']**2-sig_inst**2)),size='large')	# print sigma already in km/s
 t=plt.text(6900.,broadresu.values['amp_2']+0.8,r'$F_{SII_{2}}$ = '+ '{:.3f}'.format(maxbS2)+' $10^{-14}$',size='large')	# print sigma
 t=plt.text(6900.,broadresu.values['amp_2'],r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(maxbS1)+' $10^{-14}$',size='large')	# print sigma
@@ -574,8 +589,9 @@ plt.tick_params(axis='both', labelsize=12)
 plt.xlim(l[0],l[-1])
 plt.plot(l,np.zeros(len(l)),'k--')         	# Line around zero
 plt.plot(l,np.zeros(len(l))+3*stadev,'k--')	# 3 sigma upper limit
-plt.plot(l,np.zeros(len(l))-3*stadev,'k--') # 3 sigma down limit
+plt.plot(l,np.zeros(len(l))-3*stadev,'k--') 	# 3 sigma down limit
 
+plt.savefig(path+'adj_metS_1comp_broadH.png')
 
 ##########################################################################################################################
 ############################################# PRINT AND PLOT 2 COMP ######################################################
@@ -673,12 +689,12 @@ plt.plot(l,tgaus8,'m--')
 plt.plot(l,tgaus9,'m--')
 plt.plot(l,tgaus10,'m--',label='S')
 plt.plot(l,(linresu.values['slope']*l+linresu.values['intc']),'k-.',label='Linear fit')
-t=plt.text(6900.,twocompresu.values['amp_2']+3.2,r'$V_{SII_{2-1comp}}$ = '+ '{:.3f}'.format(v_luz*((twocompresu.values['mu_0']-l_SII_2)/l_SII_2))+' km/s',size='large')			# print v
-t=plt.text(6900.,twocompresu.values['amp_2']+2.4,r'$V_{SII_{2-2comp}}$ = '+ '{:.3f}'.format(v_luz*((twocompresu.values['mu_20']-l_SII_2)/l_SII_2))+' km/s',size='large')			# print v
+t=plt.text(6900.,twocompresu.values['amp_2']+3.2,r'$V_{SII_{2-1comp}}$ = '+ '{:.3f}'.format(v_luz*((twocompresu.values['mu_0']-l_SII_2)/l_SII_2))+' km/s',size='large')		# print v
+t=plt.text(6900.,twocompresu.values['amp_2']+2.4,r'$V_{SII_{2-2comp}}$ = '+ '{:.3f}'.format(v_luz*((twocompresu.values['mu_20']-l_SII_2)/l_SII_2))+' km/s',size='large')	# print v
 t=plt.text(6900.,twocompresu.values['amp_2']+1.6,r'$\sigma_{SII_{2-1comp}}$ = '+ '{:.3f}'.format(np.sqrt(twocompresu.values['sig_0']**2-sig_inst**2)),size='large')	# print sigma already in km/s
 t=plt.text(6900.,twocompresu.values['amp_2']+0.8,r'$\sigma_{SII_{2-2comp}}$ = '+ '{:.3f}'.format(np.sqrt(twocompresu.values['sig_20']**2-sig_inst**2)),size='large')	# print sigma already in km/s
-t=plt.text(6900.,twocompresu.values['amp_2'],r'$F_{SII_{2}}$ = '+ '{:.3f}'.format(max2S2)+' $10^{-14}$',size='large')	# print sigma
-t=plt.text(6900.,twocompresu.values['amp_2']-0.8,r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(max2S1)+' $10^{-14}$',size='large')		# print sigma
+t=plt.text(6900.,twocompresu.values['amp_2'],r'$F_{SII_{2}}$ = '+ '{:.3f}'.format(max2S2)+' $10^{-14}$',size='large')		# print sigma
+t=plt.text(6900.,twocompresu.values['amp_2']-0.8,r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(max2S1)+' $10^{-14}$',size='large')	# print sigma
 t=plt.text(6900.,twocompresu.values['amp_2']-1.6,r'$F_{NII_{2}}$ = '+ '{:.3f}'.format(max2N2)+' $10^{-14}$',size='large')	# print sigma
 t=plt.text(6900.,twocompresu.values['amp_2']-2.4,r'$F_{H_{\alpha}}$ = '+ '{:.3f}'.format(max2Ha)+' $10^{-14}$',size='large')	# print sigma
 t=plt.text(6900.,twocompresu.values['amp_2']-3.2,r'$F_{NII_{1}}$ = '+ '{:.3f}'.format(max2N1)+' $10^{-14}$',size='large')	# print sigma
@@ -705,6 +721,7 @@ plt.tick_params(axis='both', labelsize=12)
 plt.xlim(l[0],l[-1])
 plt.plot(l,np.zeros(len(l)),'k--')         	# Line around zero
 plt.plot(l,np.zeros(len(l))+3*stadev,'k--')	# 3 sigma upper limit
-plt.plot(l,np.zeros(len(l))-3*stadev,'k--') # 3 sigma down limit
+plt.plot(l,np.zeros(len(l))-3*stadev,'k--') 	# 3 sigma down limit
 
+plt.savefig(path+'adj_metS_2comp.png')
 
