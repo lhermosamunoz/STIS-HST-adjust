@@ -6,6 +6,7 @@ It is needed a path, the spectrum in which the fit is going to be made and the i
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
+import noOfuncts
 import lmfit
 import scipy.stats as stats
 import os
@@ -20,123 +21,6 @@ hdu       = hdulist[0]			# Extract the extension in which the spectra is saved
 data      = hdu.data			# Save the data (i.e. the values of the flux per pixel)
 data_head = hdu.header			# Save the header of the data
 hdulist.close()				# Close the file as we don't need it anymore
-
-
-###################################### Define the FUNCTIONS #####################################################
-#
-# Create a function to fit the data to a Gaussian given some initial values
-def gaussian(x,mu,sigm,amp):
-    '''
-    Gaussian distribution
-    
-    x - values for the fit
-    p[0]: mu - mean of the distribution
-    p[1]: sigma - stddev
-    p[2]: amplitude
-    '''
-    return amp*np.exp(-(x-mu)**2/(2*sigm**2))
-
-def linear(x,slope,intc):
-    '''
-    Linear equation
-    '''
-    y = slope*x + intc
-    return y
-
-# Function to create the gaussian and the linear fit
-def twogaussian(x,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1):
-    '''
-    Function to fit 2 lines to a gaussian + linear.
-    The parameters to introduce have to be the initial guesses. 
-    x - values for the fit
-    params: 1. mu - mean of the distribution
-	    2. sigma - stddev
-	    3. amplitude
-    '''
-    y = np.zeros_like(x)
-    y = y + (new_slop*x+new_intc)
-    y = y + gaussian(x,mu_0,sig_0,amp_0) + gaussian(x,mu_1,sig_1,amp_1)
-    return y
-
-
-# Function to create the gaussian and the linear fit
-def funcSII2comp(x,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_20,sig_20,amp_20,mu_21,sig_21,amp_21):
-    '''
-    Function to fit 2 lines to a gaussian + linear.
-    The parameters to introduce have to be the initial guesses. 
-    x - values for the fit
-    params: 1. mu - mean of the distribution
-	    2. sigma - stddev
-	    3. amplitude
-    '''
-    y = np.zeros_like(x)
-    y = y + (new_slop*x+new_intc)
-    y = y + gaussian(x,mu_0,sig_0,amp_0) + gaussian(x,mu_1,sig_1,amp_1) + gaussian(x,mu_20,sig_20,amp_20) + gaussian(x,mu_21,sig_21,amp_21)
-    return y
-
-# Function to create the gaussian and the linear fit
-def funcgauslin(x,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,mu_3,sig_3,amp_3,mu_4,sig_4,amp_4):
-    '''
-    Function to fit the spectra to a gaussian + linear.
-    The parameters to introduce have to be the initial guesses. 
-    The values will be the parameters for fitting the gaussians.
-    x - values for the fit
-    params: 1. mu - mean of the distribution
-	    2. sigma - stddev
-	    3. amplitude
-    '''
-    fy = np.zeros_like(x)
-    fy = fy + (new_slop*x+new_intc)
-    fy = fy + gaussian(x,mu_0,sig_0,amp_0) + gaussian(x,mu_1,sig_1,amp_1) + gaussian(x,mu_2,sig_2,amp_2) + gaussian(x,mu_3,sig_3,amp_3) + gaussian(x,mu_4,sig_4,amp_4)
-    return fy
-
-# Broad component of Halpha
-def funcbroad(x,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,mu_3,sig_3,amp_3,mu_4,sig_4,amp_4,mu_b,sig_b,amp_b):
-    '''
-    Function to fit the spectra to a broad Halpha component.
-    The parameters to introduce have to be the initial guesses. 
-    It is necesary to have made the linear fit first
-    x - values for the fit
-    params: 1. mu - mean of the distribution
-	    2. sigma - stddev
-	    3. amplitude
-    '''
-    y = np.zeros_like(x)
-    y = y + (new_slop*x+new_intc)
-    y = y + gaussian(x,mu_0,sig_0,amp_0) + gaussian(x,mu_1,sig_1,amp_1) + gaussian(x,mu_2,sig_2,amp_2) + gaussian(x,mu_3,sig_3,amp_3) + gaussian(x,mu_4,sig_4,amp_4) + gaussian(x,mu_b,sig_b,amp_b)
-    return y
-
-# Second component of the lines
-def func2com(x,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,mu_3,sig_3,amp_3,mu_4,sig_4,amp_4,mu_20,sig_20,amp_20,mu_21,sig_21,amp_21,mu_22,sig_22,amp_22,mu_23,sig_23,amp_23,mu_24,sig_24,amp_24):
-    '''
-    Function to fit the lines to a second component.
-    The parameters to introduce have to be the initial guesses. 
-    It is necesary to have made the linear fit first
-    x - values for the fit
-    params: 1. mu - mean of the distribution
-	    2. sigma - stddev
-	    3. amplitude
-    '''
-    y = np.zeros_like(x)
-    y = y + (new_slop*x+new_intc)
-    y = y + gaussian(x,mu_0,sig_0,amp_0) + gaussian(x,mu_1,sig_1,amp_1) + gaussian(x,mu_2,sig_2,amp_2) + gaussian(x,mu_3,sig_3,amp_3) + gaussian(x,mu_4,sig_4,amp_4) + gaussian(x,mu_20,sig_20,amp_20) + gaussian(x,mu_21,sig_21,amp_21) + gaussian(x,mu_22,sig_22,amp_22) + gaussian(x,mu_23,sig_23,amp_23) + gaussian(x,mu_24,sig_24,amp_24)
-    return y
-
-# Second component + broad Halpha of the lines
-def func2bcom(x,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,mu_3,sig_3,amp_3,mu_4,sig_4,amp_4,mu_20,sig_20,amp_20,mu_21,sig_21,amp_21,mu_22,sig_22,amp_22,mu_23,sig_23,amp_23,mu_24,sig_24,amp_24,mu_b,sig_b,amp_b):
-    '''
-    Function to fit the lines to a second component + a broad Halpha component.
-    The parameters to introduce have to be the initial guesses. 
-    It is necesary to have made the linear fit first
-    x - values for the fit
-    params: 1. mu - mean of the distribution
-	    2. sigma - stddev
-	    3. amplitude
-    '''
-    y = np.zeros_like(x)
-    y = y + (new_slop*x+new_intc)
-    y = y + gaussian(x,mu_0,sig_0,amp_0) + gaussian(x,mu_1,sig_1,amp_1) + gaussian(x,mu_2,sig_2,amp_2) + gaussian(x,mu_3,sig_3,amp_3) + gaussian(x,mu_4,sig_4,amp_4) + gaussian(x,mu_20,sig_20,amp_20) + gaussian(x,mu_21,sig_21,amp_21) + gaussian(x,mu_22,sig_22,amp_22) + gaussian(x,mu_23,sig_23,amp_23) + gaussian(x,mu_24,sig_24,amp_24) + gaussian(x,mu_b,sig_b,amp_b)
-    return y
 
 ############################# Transform data and plot the spectra ################################################
 #
@@ -161,7 +45,6 @@ plt.plot(l,data)
 plt.xlabel('Wavelength ($\AA$)')
 plt.ylabel('Flux ($erg/s/cm^{2} / \AA$)')
 plt.xlim(l[0],l[-1])
-
 
 ###################################################################################################################
 ################################################## MAIN ###########################################################
@@ -232,7 +115,6 @@ mu1 = newx2[np.argmax(newy2)]
 amp1 = max(newy2)
 amp21 = max(newy2)/2.
 
-#
 # Start the parameters for the LINEAR fit
 in_slope = 0.
 in_intc  = data_cor[0]
@@ -253,7 +135,6 @@ newflux = np.append(newflux,zon_N_S)
 newflux = np.append(newflux,zon_S_fin)
 newflux = np.append(newflux,data_cor[-1])
 
-
 ####################################### Standard deviation of the continuum #############################################
 #
 # In order to determine if the lines need one more gaussian to be fit correctly, we apply the condition
@@ -268,14 +149,14 @@ stadev = np.std(data_cor[std0:std1])
 ###################################### Start the fit and the MODEL ###############################################
 #
 # First we have to initialise the model in the SII lines by doing
-lin_mod = lmfit.Model(linear)
-sII_mod = lmfit.Model(twogaussian)
-twosII_mod = lmfit.Model(funcSII2comp)
+lin_mod = lmfit.Model(noOfuncts.linear)
+sII_mod = lmfit.Model(noOfuncts.twogaussian)
+twosII_mod = lmfit.Model(noOfuncts.funcSII2comp)
 # and initialise the model in the whole spectra for several different models
-comp_mod = lmfit.Model(funcgauslin)
-broad_mod = lmfit.Model(funcbroad)
-twocomp_mod = lmfit.Model(func2com)
-twobroadcomp_mod = lmfit.Model(func2bcom)
+comp_mod = lmfit.Model(noOfuncts.funcgauslin)
+broad_mod = lmfit.Model(noOfuncts.funcbroad)
+twocomp_mod = lmfit.Model(noOfuncts.func2com)
+twobroadcomp_mod = lmfit.Model(noOfuncts.func2bcom)
 
 # We make the linear fit only with some windows of the spectra, and calculate the line to introduce it in the formula
 linresu  = lin_mod.fit(newflux,slope=in_slope,intc=in_intc,x=newl)
@@ -287,6 +168,8 @@ paramsSII = lmfit.Parameters()
 params2SII = lmfit.Parameters()
 # add with tuples: (NAME VALUE VARY MIN  MAX  EXPR  BRUTE_STEP)
 print('The method to be applied is S-method as there are not OI lines available!')	# Method to fit
+sl = lmfit.Parameter('slop', value=new_slop,vary=False)
+it = lmfit.Parameter('intc', value=new_intc,vary=False)
 cd = lmfit.Parameter('mu_0', value=mu0)
 de = lmfit.Parameter('sig_0', value=sig0)
 ef = lmfit.Parameter('amp_0', value=amp0,min=0.)
@@ -303,8 +186,8 @@ aae = lmfit.Parameter('sig_21', value=sig21,expr='sig_20')
 aaf = lmfit.Parameter('amp_21', value=amp21,min=0.)
 
 # add a sequence of Parameters
-paramsSII.add_many(cd,de,ef,fg,gh,hi)
-params2SII.add_many(cd,de,ef,fg,gh,hi,aaa,aab,aac,aad,aae,aaf)
+paramsSII.add_many(sl,it,cd,de,ef,fg,gh,hi)
+params2SII.add_many(sl,it,cd,de,ef,fg,gh,hi,aaa,aab,aac,aad,aae,aaf)
 
 ###################################################################################################################
 # and make the fit using lmfit
@@ -324,31 +207,33 @@ print('The chi-square of the fit for 2 gaussian for SII is: {:.5f}'.format(twoSI
 print('')
 
 # Now we create and plot the individual gaussians of the fit
-gaus1 = gaussian(l,SIIresu.values['mu_0'],SIIresu.values['sig_0'],SIIresu.values['amp_0']) 
-gaus2 = gaussian(l,SIIresu.values['mu_1'],SIIresu.values['sig_1'],SIIresu.values['amp_1'])
-gaus21 = gaussian(l,twoSIIresu.values['mu_0'],twoSIIresu.values['sig_0'],twoSIIresu.values['amp_0']) 
-gaus22 = gaussian(l,twoSIIresu.values['mu_1'],twoSIIresu.values['sig_1'],twoSIIresu.values['amp_1'])
-gaus23 = gaussian(l,twoSIIresu.values['mu_20'],twoSIIresu.values['sig_20'],twoSIIresu.values['amp_20'])
-gaus24 = gaussian(l,twoSIIresu.values['mu_21'],twoSIIresu.values['sig_21'],twoSIIresu.values['amp_21'])
-SIIfin_fit = twogaussian(l,SIIresu.values['mu_0'],SIIresu.values['sig_0'],SIIresu.values['amp_0'],
-			 SIIresu.values['mu_1'],SIIresu.values['sig_1'],SIIresu.values['amp_1'])
-SII2fin_fit = funcSII2comp(l,twoSIIresu.values['mu_0'],twoSIIresu.values['sig_0'],twoSIIresu.values['amp_0'],
-			   twoSIIresu.values['mu_1'],twoSIIresu.values['sig_1'],twoSIIresu.values['amp_1'],
-			   twoSIIresu.values['mu_20'],twoSIIresu.values['sig_20'],twoSIIresu.values['amp_20'],
-			   twoSIIresu.values['mu_21'],twoSIIresu.values['sig_21'],twoSIIresu.values['amp_21'])
+gaus1 = noOfuncts.gaussian(l,SIIresu.values['mu_0'],SIIresu.values['sig_0'],SIIresu.values['amp_0']) 
+gaus2 = noOfuncts.gaussian(l,SIIresu.values['mu_1'],SIIresu.values['sig_1'],SIIresu.values['amp_1'])
+gaus21 = noOfuncts.gaussian(l,twoSIIresu.values['mu_0'],twoSIIresu.values['sig_0'],twoSIIresu.values['amp_0']) 
+gaus22 = noOfuncts.gaussian(l,twoSIIresu.values['mu_1'],twoSIIresu.values['sig_1'],twoSIIresu.values['amp_1'])
+gaus23 = noOfuncts.gaussian(l,twoSIIresu.values['mu_20'],twoSIIresu.values['sig_20'],twoSIIresu.values['amp_20'])
+gaus24 = noOfuncts.gaussian(l,twoSIIresu.values['mu_21'],twoSIIresu.values['sig_21'],twoSIIresu.values['amp_21'])
+SIIfin_fit = noOfuncts.twogaussian(l,new_slop,new_intc,
+				  SIIresu.values['mu_0'],SIIresu.values['sig_0'],SIIresu.values['amp_0'],
+			 	  SIIresu.values['mu_1'],SIIresu.values['sig_1'],SIIresu.values['amp_1'])
+SII2fin_fit = noOfuncts.funcSII2comp(l,new_slop,new_intc,
+				     twoSIIresu.values['mu_0'],twoSIIresu.values['sig_0'],twoSIIresu.values['amp_0'],
+				     twoSIIresu.values['mu_1'],twoSIIresu.values['sig_1'],twoSIIresu.values['amp_1'],
+				     twoSIIresu.values['mu_20'],twoSIIresu.values['sig_20'],twoSIIresu.values['amp_20'],
+				     twoSIIresu.values['mu_21'],twoSIIresu.values['sig_21'],twoSIIresu.values['amp_21'])
 
 # one component
 std_s2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]]-SIIfin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]])
 std_s1 = np.std(data_cor[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]]-SIIfin_fit[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]])
 print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 1 component is... ')
-print('		'+str(std_s2)+'< '+str(3*stadev))
-print('		'+str(std_s1)+'< '+str(3*stadev))
+print('		For SII2: '+str(std_s2)+' < '+str(3*stadev))
+print('		For SII1: '+str(std_s1)+' < '+str(3*stadev))
 # two components
 std2_s2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]]-SII2fin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]])
 std2_s1 = np.std(data_cor[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]]-SII2fin_fit[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]])
 print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 2 components is... ')
-print('		'+str(std2_s2)+'< '+str(3*stadev))
-print('		'+str(std2_s1)+'< '+str(3*stadev))
+print('		For SII2: '+str(std2_s2)+' < '+str(3*stadev))
+print('		For SII1: '+str(std2_s1)+' < '+str(3*stadev))
 
 # We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
 maxS1 = max(SIIfin_fit[np.where(l>l3)[0][0]:np.where(l<l4)[0][-1]])
@@ -405,7 +290,6 @@ plt.plot(l,np.zeros(len(l)),'k--')         	# Line around zero
 plt.plot(l,np.zeros(len(l))+3*stadev,'k--')	# 3 sigma upper limit
 plt.plot(l,np.zeros(len(l))-3*stadev,'k--') 	# 3 sigma down limit
 plt.ylim(-2,2)
-
 plt.savefig(path+'adj_metS_SII_1comp.png')
 
 #######################################################################################
@@ -447,7 +331,6 @@ plt.plot(l,np.zeros(len(l)),'k--')         	# Line around zero
 plt.plot(l,np.zeros(len(l))+3*stadev,'k--')	# 3 sigma upper limit
 plt.plot(l,np.zeros(len(l))-3*stadev,'k--') 	# 3 sigma down limit
 plt.ylim(-2,2)
-
 plt.savefig(path+'adj_metS_SII_2comp.png')
 
 ##############################################################################################################################################################################
@@ -459,7 +342,6 @@ fvalue, pvalue = stats.f_oneway(data_cor[np.where(l>l3)[0][0]-20:np.where(l<l2)[
 print('')
 print('The probability of a second component (one component vs two components) in this spectra is: '+str(pvalue))
 print('')
-
 
 #######################################################################################################################################
 # Select if one or two components in the SII lines and then apply to the rest
@@ -496,28 +378,29 @@ if trigger == 'Y':
     pq = lmfit.Parameter('sig_4', value=sig4,expr='sig_0')
     qr = lmfit.Parameter('amp_4', value=amp4,min=0.,expr='amp_2*(1./3.)')
 
-    params.add_many(cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr)
+    params.add_many(sl,it,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr)
     resu1 = comp_mod.fit(data_cor,params,x=l)
     
     ################################## Calculate gaussians and final fit #######################################
     # Now we create and plot the individual gaussians of the fit
-    gaus1 = gaussian(l,resu1.values['mu_0'],resu1.values['sig_0'],resu1.values['amp_0']) 
-    gaus2 = gaussian(l,resu1.values['mu_1'],resu1.values['sig_1'],resu1.values['amp_1'])
-    gaus3 = gaussian(l,resu1.values['mu_2'],resu1.values['sig_2'],resu1.values['amp_2']) 
-    gaus4 = gaussian(l,resu1.values['mu_3'],resu1.values['sig_3'],resu1.values['amp_3'])
-    gaus5 = gaussian(l,resu1.values['mu_4'],resu1.values['sig_4'],resu1.values['amp_4'])
-    fin_fit = funcgauslin(l,resu1.values['mu_0'],resu1.values['sig_0'],resu1.values['amp_0'],
-			  resu1.values['mu_1'],resu1.values['sig_1'],resu1.values['amp_1'],
-			  resu1.values['mu_2'],resu1.values['sig_2'],resu1.values['amp_2'],
-			  resu1.values['mu_3'],resu1.values['sig_3'],resu1.values['amp_3'],
-			  resu1.values['mu_4'],resu1.values['sig_4'],resu1.values['amp_4'])
+    gaus1 = noOfuncts.gaussian(l,resu1.values['mu_0'],resu1.values['sig_0'],resu1.values['amp_0']) 
+    gaus2 = noOfuncts.gaussian(l,resu1.values['mu_1'],resu1.values['sig_1'],resu1.values['amp_1'])
+    gaus3 = noOfuncts.gaussian(l,resu1.values['mu_2'],resu1.values['sig_2'],resu1.values['amp_2']) 
+    gaus4 = noOfuncts.gaussian(l,resu1.values['mu_3'],resu1.values['sig_3'],resu1.values['amp_3'])
+    gaus5 = noOfuncts.gaussian(l,resu1.values['mu_4'],resu1.values['sig_4'],resu1.values['amp_4'])
+    fin_fit = noOfuncts.funcgauslin(l,new_slop,new_intc,
+				    resu1.values['mu_0'],resu1.values['sig_0'],resu1.values['amp_0'],
+				    resu1.values['mu_1'],resu1.values['sig_1'],resu1.values['amp_1'],
+				    resu1.values['mu_2'],resu1.values['sig_2'],resu1.values['amp_2'],
+				    resu1.values['mu_3'],resu1.values['sig_3'],resu1.values['amp_3'],
+				    resu1.values['mu_4'],resu1.values['sig_4'],resu1.values['amp_4'])
 
     # one component
     stdf_s2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]]-fin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]])
     stdf_s1 = np.std(data_cor[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]]-fin_fit[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]])
     print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 1 component is... ')
-    print('		'+str(stdf_s2)+'< '+str(3*stadev))
-    print('		'+str(stdf_s1)+'< '+str(3*stadev))
+    print('	For SII2: '+str(stdf_s2)+' < '+str(3*stadev))
+    print('	For SII1: '+str(stdf_s1)+' < '+str(3*stadev))
 
     # We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
     maxfS1 = max(fin_fit[np.where(l>l3)[0][0]:np.where(l<l4)[0][-1]])
@@ -549,7 +432,6 @@ if trigger == 'Y':
     props = dict(boxstyle='round', facecolor='white', alpha=0.5)
     frame1.text(6850.,SIIresu.values['amp_0']+12., textstr, fontsize=12,verticalalignment='top', bbox=props)
     plt.plot(l[std0:std1],data_cor[std0:std1],'g')	# Zone where the stddev is calculated
-
     frame1.set_xticklabels([]) 			# Remove x-tic labels for the first frame
     plt.ylabel('Flux (x10$^{-14} \mathrm{erg/s/cm^{2} / \AA}$)',fontsize=14)
     plt.tick_params(axis='both', labelsize=12)
@@ -586,24 +468,25 @@ if trigger == 'Y':
 	ab = lmfit.Parameter('mu_b',value=mub)
 	bc = lmfit.Parameter('sig_b',value=sigb)
 	rs = lmfit.Parameter('amp_b',value=ampb)
-	paramsbH.add_many(ab,bc,rs,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr)
+	paramsbH.add_many(sl,it,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,ab,bc,rs)
 
     	broadresu = broad_mod.fit(data_cor,paramsbH,x=l)
 
         ################################## Calculate gaussians and final fit #######################################
 	# Now we create and plot the individual gaussians of the fit
-	bgaus1 = gaussian(l,broadresu.values['mu_0'],broadresu.values['sig_0'],broadresu.values['amp_0']) 
-	bgaus2 = gaussian(l,broadresu.values['mu_1'],broadresu.values['sig_1'],broadresu.values['amp_1'])
-    	bgaus3 = gaussian(l,broadresu.values['mu_2'],broadresu.values['sig_2'],broadresu.values['amp_2']) 
-	bgaus4 = gaussian(l,broadresu.values['mu_3'],broadresu.values['sig_3'],broadresu.values['amp_3'])
-    	bgaus5 = gaussian(l,broadresu.values['mu_4'],broadresu.values['sig_4'],broadresu.values['amp_4'])
-    	bgaus6 = gaussian(l,broadresu.values['mu_b'],broadresu.values['sig_b'],broadresu.values['amp_b'])
-    	broad_fit = funcbroad(l,broadresu.values['mu_0'],broadresu.values['sig_0'],broadresu.values['amp_0'],
-			      broadresu.values['mu_1'],broadresu.values['sig_1'],broadresu.values['amp_1'],
-			      broadresu.values['mu_2'],broadresu.values['sig_2'],broadresu.values['amp_2'],
-			      broadresu.values['mu_3'],broadresu.values['sig_3'],broadresu.values['amp_3'],
-			      broadresu.values['mu_4'],broadresu.values['sig_4'],broadresu.values['amp_4'],
-			      broadresu.values['mu_b'],broadresu.values['sig_b'],broadresu.values['amp_b'])
+	bgaus1 = noOfuncts.gaussian(l,broadresu.values['mu_0'],broadresu.values['sig_0'],broadresu.values['amp_0']) 
+	bgaus2 = noOfuncts.gaussian(l,broadresu.values['mu_1'],broadresu.values['sig_1'],broadresu.values['amp_1'])
+    	bgaus3 = noOfuncts.gaussian(l,broadresu.values['mu_2'],broadresu.values['sig_2'],broadresu.values['amp_2']) 
+	bgaus4 = noOfuncts.gaussian(l,broadresu.values['mu_3'],broadresu.values['sig_3'],broadresu.values['amp_3'])
+    	bgaus5 = noOfuncts.gaussian(l,broadresu.values['mu_4'],broadresu.values['sig_4'],broadresu.values['amp_4'])
+    	bgaus6 = noOfuncts.gaussian(l,broadresu.values['mu_b'],broadresu.values['sig_b'],broadresu.values['amp_b'])
+    	broad_fit = noOfuncts.funcbroad(l,new_slop,new_intc,
+					broadresu.values['mu_0'],broadresu.values['sig_0'],broadresu.values['amp_0'],
+					broadresu.values['mu_1'],broadresu.values['sig_1'],broadresu.values['amp_1'],
+					broadresu.values['mu_2'],broadresu.values['sig_2'],broadresu.values['amp_2'],
+					broadresu.values['mu_3'],broadresu.values['sig_3'],broadresu.values['amp_3'],
+					broadresu.values['mu_4'],broadresu.values['sig_4'],broadresu.values['amp_4'],
+			      		broadresu.values['mu_b'],broadresu.values['sig_b'],broadresu.values['amp_b'])
 	
     	stdb_s2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]]-broad_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]])
     	stdb_s1 = np.std(data_cor[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]]-broad_fit[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]])
@@ -611,11 +494,11 @@ if trigger == 'Y':
 	stdb_ha = np.std(data_cor[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]]-broad_fit[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]])
 	stdb_n1 = np.std(data_cor[np.where(l<l9)[0][-1]:np.where(l>l10)[0][0]]-broad_fit[np.where(l<l9)[0][-1]:np.where(l>l10)[0][0]])
     	print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 1 component + Ha is... ')
-    	print('		For SII2: '+str(stdb_s2)+'< '+str(3*stadev))
-    	print('		For SII1: '+str(stdb_s1)+'< '+str(3*stadev))
-    	print('		For NII2: '+str(stdb_n2)+'< '+str(3*stadev))
-    	print('		For Halp: '+str(stdb_ha)+'< '+str(3*stadev))
-    	print('		For SII1: '+str(stdb_n1)+'< '+str(3*stadev))
+    	print('		For SII2: '+str(stdb_s2)+' < '+str(3*stadev))
+    	print('		For SII1: '+str(stdb_s1)+' < '+str(3*stadev))
+    	print('		For NII2: '+str(stdb_n2)+' < '+str(3*stadev))
+    	print('		For Halp: '+str(stdb_ha)+' < '+str(3*stadev))
+    	print('		For SII1: '+str(stdb_n1)+' < '+str(3*stadev))
 
    	# We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
     	maxbS1 = max(broad_fit[np.where(l>l3)[0][0]:np.where(l<l4)[0][-1]])
@@ -666,7 +549,6 @@ if trigger == 'Y':
     	props = dict(boxstyle='round', facecolor='white', alpha=0.5)
     	frame1.text(6850.,broadresu.values['amp_0']+12., textstr, fontsize=12,verticalalignment='top', bbox=props)
     	plt.plot(l[std0:std1],data_cor[std0:std1],'g')	# Zone where the stddev is calculated
-
     	frame1.set_xticklabels([]) 			# Remove x-tic labels for the first frame
     	plt.ylabel('Flux (x10$^{-14} \mathrm{erg/s/cm^{2} / \AA}$)',fontsize=14)
     	plt.tick_params(axis='both', labelsize=12)
@@ -728,39 +610,40 @@ elif trigger == 'N':
     aam = lmfit.Parameter('mu_24', value=mu4,expr='mu_20*(6548./6731.)')
     aan = lmfit.Parameter('sig_24', value=sig24,expr='sig_20')
     aao = lmfit.Parameter('amp_24', value=amp24,min=0.,expr='amp_22*(1./3.)')
-    params2c.add_many(cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,aaa,aab,aac,aad,aae,aaf,aag,aah,aai,aaj,aak,aal,aam,aan,aao)
+    params2c.add_many(sl,it,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,aaa,aab,aac,aad,aae,aaf,aag,aah,aai,aaj,aak,aal,aam,aan,aao)
 
     twocompresu = twocomp_mod.fit(data_cor,params2c,x=l)
 
     ################################## Calculate gaussians and final fit #######################################
     # Now we create and plot the individual gaussians of the fit
-    tgaus1 = gaussian(l,twocompresu.values['mu_0'],twocompresu.values['sig_0'],twocompresu.values['amp_0'])
-    tgaus2 = gaussian(l,twocompresu.values['mu_1'],twocompresu.values['sig_1'],twocompresu.values['amp_1'])
-    tgaus3 = gaussian(l,twocompresu.values['mu_2'],twocompresu.values['sig_2'],twocompresu.values['amp_2'])
-    tgaus4 = gaussian(l,twocompresu.values['mu_3'],twocompresu.values['sig_3'],twocompresu.values['amp_3'])
-    tgaus5 = gaussian(l,twocompresu.values['mu_4'],twocompresu.values['sig_4'],twocompresu.values['amp_4'])
-    tgaus6 = gaussian(l,twocompresu.values['mu_20'],twocompresu.values['sig_20'],twocompresu.values['amp_20'])
-    tgaus7 = gaussian(l,twocompresu.values['mu_21'],twocompresu.values['sig_21'],twocompresu.values['amp_21']) 
-    tgaus8 = gaussian(l,twocompresu.values['mu_22'],twocompresu.values['sig_22'],twocompresu.values['amp_22'])
-    tgaus9 = gaussian(l,twocompresu.values['mu_23'],twocompresu.values['sig_23'],twocompresu.values['amp_23'])
-    tgaus10 = gaussian(l,twocompresu.values['mu_24'],twocompresu.values['sig_24'],twocompresu.values['amp_24'])
-    fin2_fit = func2com(l,twocompresu.values['mu_0'],twocompresu.values['sig_0'],twocompresu.values['amp_0'],
-		       twocompresu.values['mu_1'],twocompresu.values['sig_1'],twocompresu.values['amp_1'],
-		       twocompresu.values['mu_2'],twocompresu.values['sig_2'],twocompresu.values['amp_2'],
-		       twocompresu.values['mu_3'],twocompresu.values['sig_3'],twocompresu.values['amp_3'],
-		       twocompresu.values['mu_4'],twocompresu.values['sig_4'],twocompresu.values['amp_4'],
-		       twocompresu.values['mu_20'],twocompresu.values['sig_20'],twocompresu.values['amp_20'],
-		       twocompresu.values['mu_21'],twocompresu.values['sig_21'],twocompresu.values['amp_21'],
-		       twocompresu.values['mu_22'],twocompresu.values['sig_22'],twocompresu.values['amp_22'],
-		       twocompresu.values['mu_23'],twocompresu.values['sig_23'],twocompresu.values['amp_23'],
-		       twocompresu.values['mu_24'],twocompresu.values['sig_24'],twocompresu.values['amp_24'],)
+    tgaus1 = noOfuncts.gaussian(l,twocompresu.values['mu_0'],twocompresu.values['sig_0'],twocompresu.values['amp_0'])
+    tgaus2 = noOfuncts.gaussian(l,twocompresu.values['mu_1'],twocompresu.values['sig_1'],twocompresu.values['amp_1'])
+    tgaus3 = noOfuncts.gaussian(l,twocompresu.values['mu_2'],twocompresu.values['sig_2'],twocompresu.values['amp_2'])
+    tgaus4 = noOfuncts.gaussian(l,twocompresu.values['mu_3'],twocompresu.values['sig_3'],twocompresu.values['amp_3'])
+    tgaus5 = noOfuncts.gaussian(l,twocompresu.values['mu_4'],twocompresu.values['sig_4'],twocompresu.values['amp_4'])
+    tgaus6 = noOfuncts.gaussian(l,twocompresu.values['mu_20'],twocompresu.values['sig_20'],twocompresu.values['amp_20'])
+    tgaus7 = noOfuncts.gaussian(l,twocompresu.values['mu_21'],twocompresu.values['sig_21'],twocompresu.values['amp_21']) 
+    tgaus8 = noOfuncts.gaussian(l,twocompresu.values['mu_22'],twocompresu.values['sig_22'],twocompresu.values['amp_22'])
+    tgaus9 = noOfuncts.gaussian(l,twocompresu.values['mu_23'],twocompresu.values['sig_23'],twocompresu.values['amp_23'])
+    tgaus10 = noOfuncts.gaussian(l,twocompresu.values['mu_24'],twocompresu.values['sig_24'],twocompresu.values['amp_24'])
+    fin2_fit = noOfuncts.func2com(l,new_slop,new_intc,
+				  twocompresu.values['mu_0'],twocompresu.values['sig_0'],twocompresu.values['amp_0'],
+				  twocompresu.values['mu_1'],twocompresu.values['sig_1'],twocompresu.values['amp_1'],
+				  twocompresu.values['mu_2'],twocompresu.values['sig_2'],twocompresu.values['amp_2'],
+				  twocompresu.values['mu_3'],twocompresu.values['sig_3'],twocompresu.values['amp_3'],
+				  twocompresu.values['mu_4'],twocompresu.values['sig_4'],twocompresu.values['amp_4'],
+				  twocompresu.values['mu_20'],twocompresu.values['sig_20'],twocompresu.values['amp_20'],
+				  twocompresu.values['mu_21'],twocompresu.values['sig_21'],twocompresu.values['amp_21'],
+				  twocompresu.values['mu_22'],twocompresu.values['sig_22'],twocompresu.values['amp_22'],
+				  twocompresu.values['mu_23'],twocompresu.values['sig_23'],twocompresu.values['amp_23'],
+				  twocompresu.values['mu_24'],twocompresu.values['sig_24'],twocompresu.values['amp_24'],)
 
     # two components
     stdf2_s2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]]-fin2_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]])
     stdf2_s1 = np.std(data_cor[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]]-fin2_fit[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]])
     print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 2 components is... ')
-    print('		'+str(stdf2_s2)+'< '+str(3*stadev))
-    print('		'+str(stdf2_s1)+'< '+str(3*stadev))
+    print('	For SII2: '+str(stdf2_s2)+' < '+str(3*stadev))
+    print('	For SII1: '+str(stdf2_s1)+' < '+str(3*stadev))
 
     # We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
     maxb2S1 = max(fin2_fit[np.where(l>l3)[0][0]:np.where(l<l4)[0][-1]])
@@ -809,7 +692,6 @@ elif trigger == 'N':
     props = dict(boxstyle='round', facecolor='white', alpha=0.5)
     frame1.text(6850.,twocompresu.values['amp_0']+13.5, textstr, fontsize=12,verticalalignment='top', bbox=props)
     plt.plot(l[std0:std1],data_cor[std0:std1],'g')	# Zone where the stddev is calculated
-
     frame1.set_xticklabels([]) 			# Remove x-tic labels for the first frame
     plt.ylabel('Flux (x10$^{-14} \mathrm{erg/s/cm^{2} / \AA}$)',fontsize=14)
     plt.tick_params(axis='both', labelsize=12)
@@ -846,46 +728,47 @@ elif trigger == 'N':
 	ab = lmfit.Parameter('mu_b',value=mub)
 	bc = lmfit.Parameter('sig_b',value=sigb)
 	rs = lmfit.Parameter('amp_b',value=ampb)
-	paramsbH.add_many(ab,bc,rs,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,aaa,aab,aac,aad,aae,aaf,aag,aah,aai,aaj,aak,aal,aam,aan,aao)
+	paramsbH.add_many(sl,it,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,aaa,aab,aac,aad,aae,aaf,aag,aah,aai,aaj,aak,aal,aam,aan,aao,ab,bc,rs)
 
     	twobroadresu = twobroadcomp_mod.fit(data_cor,paramsbH,x=l)
 
         ################################## Calculate gaussians and final fit #######################################
 	# Now we create and plot the individual gaussians of the fit
-	b2gaus1 = gaussian(l,twobroadresu.values['mu_0'],twobroadresu.values['sig_0'],twobroadresu.values['amp_0']) 
-	b2gaus2 = gaussian(l,twobroadresu.values['mu_1'],twobroadresu.values['sig_1'],twobroadresu.values['amp_1'])
-    	b2gaus3 = gaussian(l,twobroadresu.values['mu_2'],twobroadresu.values['sig_2'],twobroadresu.values['amp_2']) 
-	b2gaus4 = gaussian(l,twobroadresu.values['mu_3'],twobroadresu.values['sig_3'],twobroadresu.values['amp_3'])
-    	b2gaus5 = gaussian(l,twobroadresu.values['mu_4'],twobroadresu.values['sig_4'],twobroadresu.values['amp_4'])
-	b2gaus6 = gaussian(l,twobroadresu.values['mu_20'],twobroadresu.values['sig_20'],twobroadresu.values['amp_20']) 
-	b2gaus7 = gaussian(l,twobroadresu.values['mu_21'],twobroadresu.values['sig_21'],twobroadresu.values['amp_21'])
-    	b2gaus8 = gaussian(l,twobroadresu.values['mu_22'],twobroadresu.values['sig_22'],twobroadresu.values['amp_22']) 
-	b2gaus9 = gaussian(l,twobroadresu.values['mu_23'],twobroadresu.values['sig_23'],twobroadresu.values['amp_23'])
-    	b2gaus10 = gaussian(l,twobroadresu.values['mu_24'],twobroadresu.values['sig_24'],twobroadresu.values['amp_24'])
-    	b2gausb = gaussian(l,twobroadresu.values['mu_b'],twobroadresu.values['sig_b'],twobroadresu.values['amp_b'])
-    	twobroad_fit = func2bcom(l,twobroadresu.values['mu_0'],twobroadresu.values['sig_0'],twobroadresu.values['amp_0'],
-			        twobroadresu.values['mu_1'],twobroadresu.values['sig_1'],twobroadresu.values['amp_1'],
-			        twobroadresu.values['mu_2'],twobroadresu.values['sig_2'],twobroadresu.values['amp_2'],
-			        twobroadresu.values['mu_3'],twobroadresu.values['sig_3'],twobroadresu.values['amp_3'],
-			        twobroadresu.values['mu_4'],twobroadresu.values['sig_4'],twobroadresu.values['amp_4'],
-				twobroadresu.values['mu_20'],twobroadresu.values['sig_20'],twobroadresu.values['amp_20'],
-			        twobroadresu.values['mu_21'],twobroadresu.values['sig_21'],twobroadresu.values['amp_21'],
-			        twobroadresu.values['mu_22'],twobroadresu.values['sig_22'],twobroadresu.values['amp_22'],
-			        twobroadresu.values['mu_23'],twobroadresu.values['sig_23'],twobroadresu.values['amp_23'],
-			        twobroadresu.values['mu_24'],twobroadresu.values['sig_24'],twobroadresu.values['amp_24'],
-			        twobroadresu.values['mu_b'],twobroadresu.values['sig_b'],twobroadresu.values['amp_b'])
+	b2gaus1 = noOfuncts.gaussian(l,twobroadresu.values['mu_0'],twobroadresu.values['sig_0'],twobroadresu.values['amp_0']) 
+	b2gaus2 = noOfuncts.gaussian(l,twobroadresu.values['mu_1'],twobroadresu.values['sig_1'],twobroadresu.values['amp_1'])
+    	b2gaus3 = noOfuncts.gaussian(l,twobroadresu.values['mu_2'],twobroadresu.values['sig_2'],twobroadresu.values['amp_2']) 
+	b2gaus4 = noOfuncts.gaussian(l,twobroadresu.values['mu_3'],twobroadresu.values['sig_3'],twobroadresu.values['amp_3'])
+    	b2gaus5 = noOfuncts.gaussian(l,twobroadresu.values['mu_4'],twobroadresu.values['sig_4'],twobroadresu.values['amp_4'])
+	b2gaus6 = noOfuncts.gaussian(l,twobroadresu.values['mu_20'],twobroadresu.values['sig_20'],twobroadresu.values['amp_20']) 
+	b2gaus7 = noOfuncts.gaussian(l,twobroadresu.values['mu_21'],twobroadresu.values['sig_21'],twobroadresu.values['amp_21'])
+    	b2gaus8 = noOfuncts.gaussian(l,twobroadresu.values['mu_22'],twobroadresu.values['sig_22'],twobroadresu.values['amp_22']) 
+	b2gaus9 = noOfuncts.gaussian(l,twobroadresu.values['mu_23'],twobroadresu.values['sig_23'],twobroadresu.values['amp_23'])
+    	b2gaus10 = noOfuncts.gaussian(l,twobroadresu.values['mu_24'],twobroadresu.values['sig_24'],twobroadresu.values['amp_24'])
+    	b2gausb = noOfuncts.gaussian(l,twobroadresu.values['mu_b'],twobroadresu.values['sig_b'],twobroadresu.values['amp_b'])
+    	twobroad_fit = noOfuncts.func2bcom(l,new_slop,new_intc,
+					   twobroadresu.values['mu_0'],twobroadresu.values['sig_0'],twobroadresu.values['amp_0'],
+					   twobroadresu.values['mu_1'],twobroadresu.values['sig_1'],twobroadresu.values['amp_1'],
+					   twobroadresu.values['mu_2'],twobroadresu.values['sig_2'],twobroadresu.values['amp_2'],
+					   twobroadresu.values['mu_3'],twobroadresu.values['sig_3'],twobroadresu.values['amp_3'],
+					   twobroadresu.values['mu_4'],twobroadresu.values['sig_4'],twobroadresu.values['amp_4'],
+			 		   twobroadresu.values['mu_20'],twobroadresu.values['sig_20'],twobroadresu.values['amp_20'],
+					   twobroadresu.values['mu_21'],twobroadresu.values['sig_21'],twobroadresu.values['amp_21'],
+					   twobroadresu.values['mu_22'],twobroadresu.values['sig_22'],twobroadresu.values['amp_22'],
+					   twobroadresu.values['mu_23'],twobroadresu.values['sig_23'],twobroadresu.values['amp_23'],
+					   twobroadresu.values['mu_24'],twobroadresu.values['sig_24'],twobroadresu.values['amp_24'],
+					   twobroadresu.values['mu_b'],twobroadresu.values['sig_b'],twobroadresu.values['amp_b'])
 	
     	stdb2_s2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]]-twobroad_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]])
     	stdb2_s1 = np.std(data_cor[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]]-twobroad_fit[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]])
 	stdb2_n2 = np.std(data_cor[np.where(l<l5)[0][-1]:np.where(l>l6)[0][0]]-twobroad_fit[np.where(l<l5)[0][-1]:np.where(l>l6)[0][0]])
 	stdb2_ha = np.std(data_cor[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]]-twobroad_fit[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]])
 	stdb2_n1 = np.std(data_cor[np.where(l<l9)[0][-1]:np.where(l>l10)[0][0]]-twobroad_fit[np.where(l<l9)[0][-1]:np.where(l>l10)[0][0]])
-    	print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 1 component + Ha is... ')
-    	print('		For SII2: '+str(stdb2_s2)+'< '+str(3*stadev))
-    	print('		For SII1: '+str(stdb2_s1)+'< '+str(3*stadev))
-    	print('		For NII2: '+str(stdb2_n2)+'< '+str(3*stadev))
-    	print('		For Halp: '+str(stdb2_ha)+'< '+str(3*stadev))
-    	print('		For SII1: '+str(stdb2_n1)+'< '+str(3*stadev))
+    	print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 2 components + Ha is... ')
+    	print('		For SII2: '+str(stdb2_s2)+' < '+str(3*stadev))
+    	print('		For SII1: '+str(stdb2_s1)+' < '+str(3*stadev))
+    	print('		For NII2: '+str(stdb2_n2)+' < '+str(3*stadev))
+    	print('		For Halp: '+str(stdb2_ha)+' < '+str(3*stadev))
+    	print('		For SII1: '+str(stdb2_n1)+' < '+str(3*stadev))
 
    	# We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
     	maxfb2S1 = max(twobroad_fit[np.where(l>l3)[0][0]:np.where(l<l4)[0][-1]])
@@ -946,7 +829,6 @@ elif trigger == 'N':
     	props = dict(boxstyle='round', facecolor='white', alpha=0.5)
     	frame1.text(6850.,twobroadresu.values['amp_0']+12., textstr, fontsize=12,verticalalignment='top', bbox=props)
     	plt.plot(l[std0:std1],data_cor[std0:std1],'g')	# Zone where the stddev is calculated
-
     	frame1.set_xticklabels([]) 			# Remove x-tic labels for the first frame
     	plt.ylabel('Flux (x10$^{-14} \mathrm{erg/s/cm^{2} / \AA}$)',fontsize=14)
     	plt.tick_params(axis='both', labelsize=12)
@@ -968,5 +850,4 @@ elif trigger == 'N':
 
 else: 
     print('Please use "Y" or "N"')
-
 
