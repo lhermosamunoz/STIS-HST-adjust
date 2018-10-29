@@ -86,7 +86,7 @@ def funcbroad(x,slop,intc,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,mu_
     return y
 
 # Second component of the lines
-def func2com(x,slop,intc,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,mu_3,sig_3,amp_3,mu_4,sig_4,amp_4,mu_20,sig_20,amp_20,mu_21,sig_21,amp_21,mu_22,sig_22,amp_22,mu_23,sig_23,amp_23,mu_24,sig_24,amp_24):
+def func2com(x,slop,intc,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,mu_3,sig_3,amp_3,mu_4,sig_4,amp_4,mu_5,sig_5,amp_5,mu_6,sig_6,amp_6,mu_20,sig_20,amp_20,mu_21,sig_21,amp_21,mu_22,sig_22,amp_22,mu_23,sig_23,amp_23,mu_24,sig_24,amp_24,mu_25,sig_25,amp_25,mu_26,sig_26,amp_26):
     '''
     Function to fit the lines to a second component.
     The parameters to introduce have to be the initial guesses. 
@@ -98,11 +98,11 @@ def func2com(x,slop,intc,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,mu_3
     '''
     y = np.zeros_like(x)
     y = y + (slop*x+intc)
-    y = y + gaussian(x,mu_0,sig_0,amp_0) + gaussian(x,mu_1,sig_1,amp_1) + gaussian(x,mu_2,sig_2,amp_2) + gaussian(x,mu_3,sig_3,amp_3) + gaussian(x,mu_4,sig_4,amp_4) + gaussian(x,mu_20,sig_20,amp_20) + gaussian(x,mu_21,sig_21,amp_21) + gaussian(x,mu_22,sig_22,amp_22) + gaussian(x,mu_23,sig_23,amp_23) + gaussian(x,mu_24,sig_24,amp_24)
+    y = y + gaussian(x,mu_0,sig_0,amp_0) + gaussian(x,mu_1,sig_1,amp_1) + gaussian(x,mu_2,sig_2,amp_2) + gaussian(x,mu_3,sig_3,amp_3) + gaussian(x,mu_4,sig_4,amp_4) + gaussian(x,mu_5,sig_5,amp_5) + gaussian(x,mu_6,sig_6,amp_6) + gaussian(x,mu_20,sig_20,amp_20) + gaussian(x,mu_21,sig_21,amp_21) + gaussian(x,mu_22,sig_22,amp_22) + gaussian(x,mu_23,sig_23,amp_23) + gaussian(x,mu_24,sig_24,amp_24) + gaussian(x,mu_25,sig_25,amp_25) + gaussian(x,mu_26,sig_26,amp_26)
     return y
 
 # Second component + broad Halpha of the lines
-def func2bcom(x,slop,intc,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,mu_3,sig_3,amp_3,mu_4,sig_4,amp_4,mu_20,sig_20,amp_20,mu_21,sig_21,amp_21,mu_22,sig_22,amp_22,mu_23,sig_23,amp_23,mu_24,sig_24,amp_24,mu_b,sig_b,amp_b):
+def func2bcom(x,slop,intc,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,mu_3,sig_3,amp_3,mu_4,sig_4,amp_4,mu_5,sig_5,amp_5,mu_6,sig_6,amp_6,mu_20,sig_20,amp_20,mu_21,sig_21,amp_21,mu_22,sig_22,amp_22,mu_23,sig_23,amp_23,mu_24,sig_24,amp_24,mu_25,sig_25,amp_25,mu_26,sig_26,amp_26,mu_b,sig_b,amp_b):
     '''
     Function to fit the lines to a second component + a broad Halpha component.
     The parameters to introduce have to be the initial guesses. 
@@ -114,6 +114,6 @@ def func2bcom(x,slop,intc,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2,mu_
     '''
     y = np.zeros_like(x)
     y = y + (slop*x+intc)
-    y = y + gaussian(x,mu_0,sig_0,amp_0) + gaussian(x,mu_1,sig_1,amp_1) + gaussian(x,mu_2,sig_2,amp_2) + gaussian(x,mu_3,sig_3,amp_3) + gaussian(x,mu_4,sig_4,amp_4) + gaussian(x,mu_20,sig_20,amp_20) + gaussian(x,mu_21,sig_21,amp_21) + gaussian(x,mu_22,sig_22,amp_22) + gaussian(x,mu_23,sig_23,amp_23) + gaussian(x,mu_24,sig_24,amp_24) + gaussian(x,mu_b,sig_b,amp_b)
+    y = y + gaussian(x,mu_0,sig_0,amp_0) + gaussian(x,mu_1,sig_1,amp_1) + gaussian(x,mu_2,sig_2,amp_2) + gaussian(x,mu_3,sig_3,amp_3) + gaussian(x,mu_4,sig_4,amp_4) + gaussian(x,mu_5,sig_5,amp_5) + gaussian(x,mu_6,sig_6,amp_6) + gaussian(x,mu_20,sig_20,amp_20) + gaussian(x,mu_21,sig_21,amp_21) + gaussian(x,mu_22,sig_22,amp_22) + gaussian(x,mu_23,sig_23,amp_23) + gaussian(x,mu_24,sig_24,amp_24) + gaussian(x,mu_25,sig_25,amp_25) + gaussian(x,mu_26,sig_26,amp_26) + gaussian(x,mu_b,sig_b,amp_b)
     return y
 
