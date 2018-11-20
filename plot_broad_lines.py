@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import scipy.stats as stats
 import Ofuncts
 
-def broad_plot(path,l,data_cor,meth,trigger,linresu,oneresu,tworesu,broadresu,l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,l11,l12,l13,l14,std0,std1):
+def broad_plot(path,l,data_cor,meth,trigger,linresu,refresu,fullresu,broadresu,l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,l11,l12,l13,l14,std0,std1,z,erz):
 	'''
 	It gives the plots for one and two components + a broad component in the whole spectra
 
@@ -14,8 +14,8 @@ def broad_plot(path,l,data_cor,meth,trigger,linresu,oneresu,tworesu,broadresu,l1
 	meth:          Method to be applied (S/O)
 	trigger:       This had to be said to the program to decide whether 1 or 2 components
 	linresu:       Result of the linear fit of the spectra
-	oneresu:       Result of the linear+gaussian fit for the reference lines with one component
-	tworesu:       Result of the linear+gaussian fit for the reference lines with two components
+	refresu:       Result of the linear+gaussian fit for the reference lines with one component or two components
+	fullresu:      Result of the linear+gaussian fit for the spectra with one component or two components
 	broadresu:     Result of the linear+gaussian+broad Ha fit for the spectra with one or two components
 	l1-l14:        Parts of the spectra where the lines are located
 	std0/std1:     Where the standard deviation of the continuum is calculated
@@ -32,6 +32,10 @@ def broad_plot(path,l,data_cor,meth,trigger,linresu,oneresu,tworesu,broadresu,l1
 	# Constants and STIS parameters
 	v_luz = 299792.458 # km/s
 	sig_inst = 1.32	# pix
+
+	# Systemic velocity of the galaxy
+	vsys = v_luz*z
+	er_vsys = v_luz*erz
 	
 	new_slop = linresu.values['slope']
 	new_intc = linresu.values['intc']
@@ -64,11 +68,11 @@ def broad_plot(path,l,data_cor,meth,trigger,linresu,oneresu,tworesu,broadresu,l1
 	    stdb_ha = np.std(data_cor[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]]-broad_fit[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]])
 	    stdb_n1 = np.std(data_cor[np.where(l<l9)[0][-1]:np.where(l>l10)[0][0]]-broad_fit[np.where(l<l9)[0][-1]:np.where(l>l10)[0][0]])
     	    print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 1 component + Ha is... ')
-    	    print('		For SII2: '+str(stdb_s2)+' < '+str(3*stadev))
-    	    print('		For SII1: '+str(stdb_s1)+' < '+str(3*stadev))
-    	    print('		For NII2: '+str(stdb_n2)+' < '+str(3*stadev))
-    	    print('		For Halp: '+str(stdb_ha)+' < '+str(3*stadev))
-    	    print('		For SII1: '+str(stdb_n1)+' < '+str(3*stadev))
+    	    print('		For SII2: '+str(stdb_s2/stadev)+' < 3')
+    	    print('		For SII1: '+str(stdb_s1/stadev)+' < 3')
+    	    print('		For NII2: '+str(stdb_n2/stadev)+' < 3')
+    	    print('		For Halp: '+str(stdb_ha/stadev)+' < 3')
+    	    print('		For SII1: '+str(stdb_n1/stadev)+' < 3')
 
    	    # We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
     	    maxbS1 = max(broad_fit[np.where(l>l3)[0][0]:np.where(l<l4)[0][-1]])
@@ -81,13 +85,27 @@ def broad_plot(path,l,data_cor,meth,trigger,linresu,oneresu,tworesu,broadresu,l1
 	    # one component + Halpha
             sigbS2 = 47*np.sqrt(broadresu.values['sig_0']**2-sig_inst**2)
             sigb0S2 = 47*np.sqrt(broadresu.values['sig_b']**2-sig_inst**2)
-            esigbS2 = 47*np.sqrt(broadresu.values['sig_0']*tworesu.params['sig_0'].stderr)/(np.sqrt(broadresu.values['sig_0']**2-sig_inst**2))
-            esigb0S2 = 47*np.sqrt(broadresu.values['sig_b']*broadresu.params['sig_b'].stderr)/(np.sqrt(broadresu.values['sig_b']**2-sig_inst**2))
+            if refresu.params['sig_0'].stderr == None:
+                esigbS2 = 0.
+            else: 
+		esigbS2 = 47*np.sqrt(broadresu.values['sig_0']*refresu.params['sig_0'].stderr)/(np.sqrt(broadresu.values['sig_0']**2-sig_inst**2))
+            if broadresu.params['sig_b'].stderr == None:
+                esigb0S2 = 0.
+            else: 
+		esigb0S2 = 47*np.sqrt(broadresu.values['sig_b']*broadresu.params['sig_b'].stderr)/(np.sqrt(broadresu.values['sig_b']**2-sig_inst**2))
+
 	    if meth == 'S':
-		vS2 = v_luz*((broadresu.values['mu_0']-l_SII_2)/l_SII_2)
-		vbS2 = v_luz*((broadresu.values['mu_b']-l_Halpha)/l_Halpha)
-		evS2 = (v_luz/l_SII_2)*oneresu.params['mu_0'].stderr
-		evbS2 = (v_luz/l_Halpha)*broadresu.params['mu_b'].stderr
+		vS2 = (v_luz*((broadresu.values['mu_0']-l_SII_2)/l_SII_2))-vsys
+		vbS2 = (v_luz*((broadresu.values['mu_b']-l_Halpha)/l_Halpha))-vsys
+		if refresu.params['mu_0'].stderr == None: 
+		    print('Problem determining the errors! First component ')
+		    evS2 = 0.
+		elif refresu.params['mu_0'].stderr != None: 
+		    evS2 = ((v_luz/l_SII_2)*refresu.params['mu_0'].stderr)-er_vsys
+		if broadresu.params['mu_b'].stderr == None:
+		    evbS2 = 0.
+		else:
+		    evbS2 = ((v_luz/l_Halpha)*broadresu.params['mu_b'].stderr)-er_vsys
     	        textstr = '\n'.join((r'$V_{SII_{2}}$ = '+ '{:.2f} +- {:.2f}'.format(vS2,evS2),
 			r'$V_{H_{\alpha-broad}}$ = '+ '{:.2f} +- {:.2f}'.format(vbS2,evbS2),
 		    	r'$\sigma_{SII_{2}}$ = '+ '{:.2f} +- {:.2f}'.format(sigbS2,esigbS2),
@@ -99,11 +117,20 @@ def broad_plot(path,l,data_cor,meth,trigger,linresu,oneresu,tworesu,broadresu,l1
 		    	r'$F_{NII_{1}}$ = '+ '{:.3f}'.format(maxbN1)+' $10^{-14}$',
 		    	r'$F_{OI_{2}}$ = '+ '{:.3f}'.format(maxbO2)+' $10^{-14}$',
 		    	r'$F_{OI_{1}}$ = '+ '{:.3f}'.format(maxbO1)+' $10^{-14}$'))
+
 	    elif meth == 'O':
-		vS2 = v_luz*((broadresu.values['mu_5']-l_OI_1)/l_OI_1)
-		vbS2 = v_luz*((broadresu.values['mu_b']-l_Halpha)/l_Halpha)
-		evS2 = (v_luz/l_OI_1)*oneresu.params['mu_0'].stderr
-		evbS2 = (v_luz/l_Halpha)*broadresu.params['mu_b'].stderr
+		vS2 = (v_luz*((broadresu.values['mu_5']-l_OI_1)/l_OI_1))-vsys
+		vbS2 = (v_luz*((broadresu.values['mu_b']-l_Halpha)/l_Halpha))-vsys
+		if refresu.params['mu_0'].stderr == None: 
+		    print('Problem determining the errors! First component ')
+		    evS2 = 0.
+		elif refresu.params['mu_0'].stderr != None: 
+		    evS2 = ((v_luz/l_OI_1)*refresu.params['mu_0'].stderr)-er_vsys
+		if broadresu.params['mu_b'].stderr == None:
+		    evbS2 = 0.
+		else:
+		    evbS2 = ((v_luz/l_Halpha)*broadresu.params['mu_b'].stderr)-er_vsys
+
     	        textstr = '\n'.join((r'$V_{OI_{1}}$ = '+ '{:.2f} +- {:.2f}'.format(vS2,evS2),
 			r'$V_{H_{\alpha-broad}}$ = '+ '{:.2f} +- {:.2f}'.format(vbS2,evbS2),
 		    	r'$\sigma_{OI_{1}}$ = '+ '{:.2f} +- {:.2f}'.format(sigbS2,esigbS2),
@@ -115,13 +142,6 @@ def broad_plot(path,l,data_cor,meth,trigger,linresu,oneresu,tworesu,broadresu,l1
 		    	r'$F_{NII_{1}}$ = '+ '{:.3f}'.format(maxbN1)+' $10^{-14}$',
 		    	r'$F_{OI_{2}}$ = '+ '{:.3f}'.format(maxbO2)+' $10^{-14}$',
 		    	r'$F_{OI_{1}}$ = '+ '{:.3f}'.format(maxbO1)+' $10^{-14}$'))
-
-	    #############################################################################################################
-	    # We make an F-test to see if it is significant the presence of a broad component in the lines. 
-	    #fbvalue, pbvalue = stats.f_oneway(data_cor[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]]-fin_fit[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]],data_cor[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]]-broad_fit[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]])
-	    print('')
-	    #print('The probability of a second component (one component vs one + broad Halpha components) in this spectra is: '+str(pbvalue))
-	    #print('')
 
    	    ################################################ PLOT ######################################################
     	    plt.close('all')
@@ -205,11 +225,11 @@ def broad_plot(path,l,data_cor,meth,trigger,linresu,oneresu,tworesu,broadresu,l1
 	    stdb2_ha = np.std(data_cor[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]]-twobroad_fit[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]])
 	    stdb2_n1 = np.std(data_cor[np.where(l<l9)[0][-1]:np.where(l>l10)[0][0]]-twobroad_fit[np.where(l<l9)[0][-1]:np.where(l>l10)[0][0]])
 	    print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 1 component + Ha is... ')
-	    print('		For SII2: '+str(stdb2_s2)+' < '+str(3*stadev))
-	    print('		For SII1: '+str(stdb2_s1)+' < '+str(3*stadev))
-	    print('		For NII2: '+str(stdb2_n2)+' < '+str(3*stadev))
-	    print('		For Halp: '+str(stdb2_ha)+' < '+str(3*stadev))
-	    print('		For SII1: '+str(stdb2_n1)+' < '+str(3*stadev))
+	    print('		For SII2: '+str(stdb2_s2/stadev)+' < 3')
+	    print('		For SII1: '+str(stdb2_s1/stadev)+' < 3')
+	    print('		For NII2: '+str(stdb2_n2/stadev)+' < 3')
+	    print('		For Halp: '+str(stdb2_ha/stadev)+' < 3')
+	    print('		For SII1: '+str(stdb2_n1/stadev)+' < 3')
 
 	    # We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
 	    maxfbS1 = max(twobroad_fit[np.where(l>l3)[0][0]:np.where(l<l4)[0][-1]])
@@ -223,16 +243,31 @@ def broad_plot(path,l,data_cor,meth,trigger,linresu,oneresu,tworesu,broadresu,l1
 	    sigS2 = 47*np.sqrt(broadresu.values['sig_0']**2-sig_inst**2)
 	    sig2S2 = 47*np.sqrt(broadresu.values['sig_20']**2-sig_inst**2)
 	    sigbS2 = 47*np.sqrt(broadresu.values['sig_b']**2-sig_inst**2)
-	    esigS2 = 47*np.sqrt(broadresu.values['sig_0']*tworesu.params['sig_0'].stderr)/(np.sqrt(broadresu.values['sig_0']**2-sig_inst**2))
-	    esig2S2 = 47*np.sqrt(broadresu.values['sig_20']*tworesu.params['sig_20'].stderr)/(np.sqrt(broadresu.values['sig_20']**2-sig_inst**2))
-	    esigbS2 = 47*np.sqrt(broadresu.values['sig_b']*broadresu.params['sig_b'].stderr)/(np.sqrt(broadresu.values['sig_b']**2-sig_inst**2))
+            if refresu.params['sig_0'].stderr == None and refresu.params['sig_20'].stderr == None:
+                esigS2,esig2S2 = 0.,0.
+            else: 
+		esigS2 = 47*np.sqrt(broadresu.values['sig_0']*refresu.params['sig_0'].stderr)/(np.sqrt(broadresu.values['sig_0']**2-sig_inst**2))
+		esig2S2 = 47*np.sqrt(broadresu.values['sig_20']*refresu.params['sig_20'].stderr)/(np.sqrt(broadresu.values['sig_20']**2-sig_inst**2))
+            if broadresu.params['sig_b'].stderr == None:
+                esigbS2 = 0.
+            else: 
+		esigbS2 = 47*np.sqrt(broadresu.values['sig_b']*broadresu.params['sig_b'].stderr)/(np.sqrt(broadresu.values['sig_b']**2-sig_inst**2))
+
 	    if meth == 'S':
-		vS2 = v_luz*((broadresu.values['mu_0']-l_SII_2)/l_SII_2)
-		v2S2 = v_luz*((broadresu.values['mu_20']-l_SII_2)/l_SII_2)
-		vbS2 = v_luz*((broadresu.values['mu_b']-l_Halpha)/l_Halpha)
-		evS2 = (v_luz/l_SII_2)*tworesu.params['mu_0'].stderr
-		ev2S2 = (v_luz/l_SII_2)*tworesu.params['mu_20'].stderr
-		evbS2 = (v_luz/l_Halpha)*broadresu.params['mu_b'].stderr
+		vS2 = (v_luz*((broadresu.values['mu_0']-l_SII_2)/l_SII_2))-vsys
+		v2S2 = (v_luz*((broadresu.values['mu_20']-l_SII_2)/l_SII_2))-vsys
+		vbS2 = (v_luz*((broadresu.values['mu_b']-l_Halpha)/l_Halpha))-vsys
+		if refresu.params['mu_0'].stderr == None: 
+		    print('Problem determining the errors! First component ')
+		    evS2,ev2S2 = 0.,0.
+		elif refresu.params['mu_0'].stderr != None: 
+		    evS2 = ((v_luz/l_SII_2)*refresu.params['mu_0'].stderr)-er_vsys
+		    ev2S2 = ((v_luz/l_SII_2)*refresu.params['mu_20'].stderr)-er_vsys
+		if broadresu.params['mu_b'].stderr == None:
+		    evbS2 = 0.
+		else:
+		    evbS2 = ((v_luz/l_Halpha)*broadresu.params['mu_b'].stderr)-er_vsys
+		
     	        textstr = '\n'.join((r'$V_{SII_{2-1comp}}$ = '+ '{:.2f} +- {:.2f}'.format(vS2,evS2),
 			r'$V_{SII_{2-2comp}}$ = '+ '{:.2f} +- {:.2f}'.format(v2S2,ev2S2),
 			r'$V_{H_{\alpha-broad}}$ = '+ '{:.2f} +- {:.2f}'.format(vbS2,evbS2),
@@ -246,13 +281,21 @@ def broad_plot(path,l,data_cor,meth,trigger,linresu,oneresu,tworesu,broadresu,l1
 		    	r'$F_{NII_{1}}$ = '+ '{:.3f}'.format(maxfbN1)+' $10^{-14}$',
 		    	r'$F_{OI_{2}}$ = '+ '{:.3f}'.format(maxfbO2)+' $10^{-14}$',
 		    	r'$F_{OI_{1}}$ = '+ '{:.3f}'.format(maxfbO1)+' $10^{-14}$'))
+
 	    elif meth == 'O':
-		vS2 = v_luz*((broadresu.values['mu_5']-l_OI_1)/l_OI_1)
-		v2S2 = v_luz*((broadresu.values['mu_25']-l_OI_1)/l_OI_1)
-		vbS2 = v_luz*((broadresu.values['mu_b']-l_Halpha)/l_Halpha)
-		evS2 = (v_luz/l_OI_1)*tworesu.params['mu_0'].stderr
-		ev2S2 = (v_luz/l_OI_1)*tworesu.params['mu_20'].stderr
-		evbS2 = (v_luz/l_Halpha)*broadresu.params['mu_b'].stderr
+		vS2 = (v_luz*((broadresu.values['mu_5']-l_OI_1)/l_OI_1))-vsys
+		v2S2 = (v_luz*((broadresu.values['mu_25']-l_OI_1)/l_OI_1))-vsys
+		vbS2 = (v_luz*((broadresu.values['mu_b']-l_Halpha)/l_Halpha))-vsys
+		if refresu.params['mu_5'].stderr == None: 
+		    print('Problem determining the errors! First component ')
+		    evS2,ev2S2 = 0.,0.
+		elif refresu.params['mu_5'].stderr != None: 
+		    evS2 = ((v_luz/l_OI_1)*refresu.params['mu_0'].stderr)-er_vsys
+		    ev2S2 = ((v_luz/l_OI_1)*refresu.params['mu_20'].stderr)-er_vsys
+		if broadresu.params['mu_b'].stderr == None:
+		    evbS2 = 0.
+		else:
+		    evbS2 = ((v_luz/l_Halpha)*broadresu.params['mu_b'].stderr)-er_vsys
     	        textstr = '\n'.join((r'$V_{OI_{1-1comp}}$ = '+ '{:.2f} +- {:.2f}'.format(vS2,evS2),
 			r'$V_{OI_{2-2comp}}$ = '+ '{:.2f} +- {:.2f}'.format(v2S2,ev2S2),
 			r'$V_{H_{\alpha-broad}}$ = '+ '{:.2f} +- {:.2f}'.format(vbS2,evbS2),
@@ -267,12 +310,6 @@ def broad_plot(path,l,data_cor,meth,trigger,linresu,oneresu,tworesu,broadresu,l1
 		    	r'$F_{OI_{2}}$ = '+ '{:.3f}'.format(maxfbO2)+' $10^{-14}$',
 		    	r'$F_{OI_{1}}$ = '+ '{:.3f}'.format(maxfbO1)+' $10^{-14}$'))
 
-	    #############################################################################################################
-	    # We make an F-test to see if it is significant the presence of a broad component in the lines. 
-	    #fb2value, pb2value = stats.f_oneway(data_cor[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]]-fin2_fit[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]],data_cor[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]]-twobroad_fit[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]])
-	    print('')
-	    #print('The probability of a third component (two component vs two + broad Halpha components) in this spectra is: '+str(pb2value))
-	    #print('')
 	    ################################################ PLOT ######################################################
 	    plt.close('all')
 	    # MAIN plot

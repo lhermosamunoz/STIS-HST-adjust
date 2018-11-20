@@ -9,8 +9,8 @@ from astropy.io import fits
 import noOfuncts
 import lmfit
 import scipy.stats as stats
+from PyAstronomy.pyasl import ftest
 import os
-
 
 ######################### Define the PATHS to the data and extract the spectra ###################################
 #
@@ -60,8 +60,8 @@ l_SII_2  = 6731.
 
 # Constants and STIS parameters
 v_luz = 299792.458 # km/s
-pix_to_v = 50	# km/s
-sig_inst = 1.32	# pix
+pix_to_v = 21	# km/s
+sig_inst = 1.1	# A if binning 1x1 // 2.2 if binning 1x2
 ang_to_pix = 0.56
 
 # Now redefine the zone to fit
@@ -79,6 +79,8 @@ if not os.path.exists(path+'ranges.txt'):
     l8 = input('lambda sup for Halpha (angs)?: ')
     l9 = input('lambda inf for NII 1 (angs)?: ')
     l10 = input('lambda sup for NII 1 (angs)?: ')
+    z = input('Redshift of the galaxy?: ')
+    erz = input('Error of the redshift of the galaxy?: ')
 else:
     t = np.genfromtxt(path+'ranges.txt')
     l1 = t[0,]
@@ -91,6 +93,8 @@ else:
     l8 = t[7,]
     l9 = t[8,]
     l10 = t[9,]
+    z = t[-2,]
+    erz = t[-1,]
 
 newx1 = l[np.where(l>l1)[0][0]:np.where(l<l2)[0][-1]+1]		# SII2
 newy1 = data_cor[np.where(l>l1)[0][0]:np.where(l<l2)[0][-1]+1]
@@ -122,6 +126,9 @@ in_intc  = data_cor[0]
 # Redefine the lambda zone with the first and last point and the zones in between NII2-SII1 and SII2-final
 newl = l[1]
 l11 = input('Aprox max wavelength of the spectra?: ')
+if l11<6900.:
+    zone_extra = l[np.where(l<6400.)[0][-1]+10:np.where(l>l10)[0][0]-50]
+    newl = np.append(newl,zone_extra)
 zone_S_fin = l[np.where(l<l2)[0][-1]+10:np.where(l>l11)[0][0]]
 zone_N_S = l[np.where(l<l6)[0][-1]+10:np.where(l>l3)[0][0]-10]
 newl = np.append(newl,zone_N_S)
@@ -129,6 +136,9 @@ newl = np.append(newl,zone_S_fin)
 newl = np.append(newl,l[-1])
 # now we do the same but with the flux data (y vector)
 newflux = data_cor[1]
+if l11<6900.:
+    zone_extra = data_cor[np.where(l<6400.)[0][-1]+10:np.where(l>l10)[0][0]-50]
+    newflux = np.append(newflux,zone_extra)
 zon_S_fin = data_cor[np.where(l<l2)[0][-1]+10:np.where(l>l11)[0][0]]
 zon_N_S = data_cor[np.where(l<l6)[0][-1]+10:np.where(l>l3)[0][0]-10]
 newflux = np.append(newflux,zon_N_S)
@@ -178,8 +188,9 @@ gh = lmfit.Parameter('sig_1', value=sig1,expr='sig_0')
 hi = lmfit.Parameter('amp_1', value=amp1,min=0.)
 
 # second components
+de2 = lmfit.Parameter('sig_0', value=sig0,min=1.1)
 aaa = lmfit.Parameter('mu_20', value=mu0)
-aab = lmfit.Parameter('sig_20', value=sig20)
+aab = lmfit.Parameter('sig_20', value=sig20,min=1.1)
 aac = lmfit.Parameter('amp_20', value=amp20,min=0.)
 aad = lmfit.Parameter('mu_21', value=mu1,expr='mu_20*(6716./6731.)')
 aae = lmfit.Parameter('sig_21', value=sig21,expr='sig_20')
@@ -187,12 +198,15 @@ aaf = lmfit.Parameter('amp_21', value=amp21,min=0.)
 
 # add a sequence of Parameters
 paramsSII.add_many(sl,it,cd,de,ef,fg,gh,hi)
-params2SII.add_many(sl,it,cd,de,ef,fg,gh,hi,aaa,aab,aac,aad,aae,aaf)
+params2SII.add_many(sl,it,cd,de2,ef,fg,gh,hi,aaa,aab,aac,aad,aae,aaf)
 
 ###################################################################################################################
 # and make the fit using lmfit
 SIIresu = sII_mod.fit(data_cor[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20],paramsSII,x=l[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20])
 twoSIIresu = twosII_mod.fit(data_cor[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20],params2SII,x=l[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20])
+
+lmfit.model.save_modelresult(SIIresu, path+'SII_modelresult.sav')
+lmfit.model.save_modelresult(twoSIIresu, path+'SII_twocomps_modelresult.sav')
 
 ##################################### PLOT and PRINT for the SII lines ##################################################
 #
@@ -226,34 +240,48 @@ SII2fin_fit = noOfuncts.funcSII2comp(l,new_slop,new_intc,
 std_s2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]]-SIIfin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]])
 std_s1 = np.std(data_cor[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]]-SIIfin_fit[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]])
 print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 1 component is... ')
-print('		For SII2: '+str(std_s2)+' < '+str(3*stadev))
-print('		For SII1: '+str(std_s1)+' < '+str(3*stadev))
+print('		For SII2: '+str(std_s2/stadev)+' < 3')
+print('		For SII1: '+str(std_s1/stadev)+' < 3')
 # two components
 std2_s2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]]-SII2fin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]])
 std2_s1 = np.std(data_cor[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]]-SII2fin_fit[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]])
 print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 2 components is... ')
-print('		For SII2: '+str(std2_s2)+' < '+str(3*stadev))
-print('		For SII1: '+str(std2_s1)+' < '+str(3*stadev))
+print('		For SII2: '+str(std2_s2/stadev)+' < 3')
+print('		For SII1: '+str(std2_s1/stadev)+' < 3')
 
 # We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
 maxS1 = max(SIIfin_fit[np.where(l>l3)[0][0]:np.where(l<l4)[0][-1]])
 maxS2 = max(SIIfin_fit[np.where(l>l1)[0][0]:np.where(l<l2)[0][-1]])
 max2S1 = max(SII2fin_fit[np.where(l>l3)[0][0]:np.where(l<l4)[0][-1]])
 max2S2 = max(SII2fin_fit[np.where(l>l1)[0][0]:np.where(l<l2)[0][-1]])
+# Systemic velocity + error
+vsys = v_luz*z
+er_vsys = v_luz*erz
 # one component
-vS2 = v_luz*((SIIresu.values['mu_0']-l_SII_2)/l_SII_2)
-evS2 = (v_luz/l_SII_2)*SIIresu.params['mu_0'].stderr
+vS2 = (v_luz*((SIIresu.values['mu_0']-l_SII_2)/l_SII_2))-vsys
 sigS2 = 47*np.sqrt(SIIresu.values['sig_0']**2-sig_inst**2)
-esigS2 = 47*np.sqrt(SIIresu.values['sig_0']*SIIresu.params['sig_0'].stderr)/(np.sqrt(SIIresu.values['sig_0']**2-sig_inst**2))
 # two comps
-v2S2 = v_luz*((twoSIIresu.values['mu_0']-l_SII_2)/l_SII_2)
-v20S2 = v_luz*((twoSIIresu.values['mu_20']-l_SII_2)/l_SII_2)
-ev2S2 = (v_luz/l_SII_2)*twoSIIresu.params['mu_0'].stderr
-ev20S2 = (v_luz/l_SII_2)*twoSIIresu.params['mu_20'].stderr
+v2S2 = (v_luz*((twoSIIresu.values['mu_0']-l_SII_2)/l_SII_2))-vsys
+v20S2 = (v_luz*((twoSIIresu.values['mu_20']-l_SII_2)/l_SII_2))-vsys
 sig2S2 = 47*np.sqrt(twoSIIresu.values['sig_0']**2-sig_inst**2)
 sig20S2 = 47*np.sqrt(twoSIIresu.values['sig_20']**2-sig_inst**2)
-esig2S2 = 47*np.sqrt(twoSIIresu.values['sig_0']*twoSIIresu.params['sig_0'].stderr)/(np.sqrt(twoSIIresu.values['sig_0']**2-sig_inst**2))
-esig20S2 = 47*np.sqrt(twoSIIresu.values['sig_20']*twoSIIresu.params['sig_20'].stderr)/(np.sqrt(twoSIIresu.values['sig_20']**2-sig_inst**2))
+
+if SIIresu.params['mu_0'].stderr == None: 
+     print('Problem determining the errors!')
+     evS2,esigS2 = 0.,0.
+elif SIIresu.params['mu_0'].stderr != None: 
+     evS2 = ((v_luz/l_SII_2)*SIIresu.params['mu_0'].stderr)-er_vsys
+     esigS2 = 47*np.sqrt(SIIresu.values['sig_0']*SIIresu.params['sig_0'].stderr)/(np.sqrt(SIIresu.values['sig_0']**2-sig_inst**2))
+
+if twoSIIresu.params['mu_20'].stderr == None:
+    print('Problem determining the errors!')
+    ev20S2,ev2S2,esig2S2,esig20S2 = 0.,0.,0.,0.
+elif twoSIIresu.params['mu_20'].stderr != None:
+    ev2S2 = ((v_luz/l_SII_2)*twoSIIresu.params['mu_0'].stderr)-er_vsys
+    ev20S2 = ((v_luz/l_SII_2)*twoSIIresu.params['mu_20'].stderr)-er_vsys
+    esig2S2 = 47*np.sqrt(twoSIIresu.values['sig_0']*twoSIIresu.params['sig_0'].stderr)/(np.sqrt(twoSIIresu.values['sig_0']**2-sig_inst**2))
+    esig20S2 = 47*np.sqrt(twoSIIresu.values['sig_20']*twoSIIresu.params['sig_20'].stderr)/(np.sqrt(twoSIIresu.values['sig_20']**2-sig_inst**2))
+
 
 ################################################ PLOT ######################################################
 plt.close()
@@ -267,10 +295,14 @@ plt.plot(l,gaus2,'c--',label='N')
 plt.plot(l,(linresu.values['slope']*l+linresu.values['intc']),'k-.',label='Linear fit')
 textstr = '\n'.join((r'$V_{SII_{2}}$ = '+ '{:.2f} +- {:.2f}'.format(vS2,evS2),
 		    r'$\sigma_{SII_{2}}$ = '+ '{:.2f} +- {:.2f}'.format(sigS2,esigS2),
-		    r'$F_{SII_{2}}$ = '+ '{:.3f}'.format(maxS2)+' $10^{-14}$',
-		    r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(maxS1)+' $10^{-14}$'))
+		    r'$\frac{F_{SII_{2}}}{F_{SII_{1}}}$ = '+ '{:.3f}'.format(maxS2/maxS1)))
+#		    r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(maxS1)+' $10^{-14}$'))
 props = dict(boxstyle='round', facecolor='white', alpha=0.5)
-frame1.text(6850.,SIIresu.values['amp_0']+12., textstr, fontsize=12,verticalalignment='top', bbox=props)
+if l11<6900.:
+    x_frame = 6400.
+else: 
+    x_frame = 6800.
+frame1.text(x_frame,max(data_cor), textstr, fontsize=12,verticalalignment='top', bbox=props)
 plt.plot(l[std0:std1],data_cor[std0:std1],'g')	# Zone where the stddev is calculated
 
 frame1.set_xticklabels([]) 			# Remove x-tic labels for the first frame
@@ -289,7 +321,7 @@ plt.xlim(l[0],l[-1])
 plt.plot(l,np.zeros(len(l)),'k--')         	# Line around zero
 plt.plot(l,np.zeros(len(l))+3*stadev,'k--')	# 3 sigma upper limit
 plt.plot(l,np.zeros(len(l))-3*stadev,'k--') 	# 3 sigma down limit
-plt.ylim(-2,2)
+plt.ylim(-1,1)
 plt.savefig(path+'adj_metS_SII_1comp.png')
 
 #######################################################################################
@@ -308,10 +340,10 @@ textstr = '\n'.join((r'$V_{SII_{2-1comp}}$ = '+ '{:.2f} +- {:.2f}'.format(v2S2,e
 		    r'$V_{SII_{2-2comp}}$ = '+ '{:.2f} +- {:.2f}'.format(v20S2,ev20S2),
 		    r'$\sigma_{SII_{2-1comp}}$ = '+ '{:.2f} +- {:.2f}'.format(sig2S2,esig2S2),
 		    r'$\sigma_{SII_{2-2comp}}$ = '+ '{:.2f} +- {:.2f}'.format(sig20S2,esig20S2),
-		    r'$F_{SII_{2}}$ = '+ '{:.3f}'.format(max2S2)+' $10^{-14}$',
-		    r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(max2S1)+' $10^{-14}$'))
+		    r'$\frac{F_{SII_{2}}}{F_{SII_{1}}}$ = '+ '{:.3f}'.format(max2S2/max2S1)))
+#		    r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(max2S1)+' $10^{-14}$'))
 props = dict(boxstyle='round', facecolor='white', alpha=0.5)
-frame3.text(6850.,twoSIIresu.values['amp_0']+12., textstr, fontsize=12,verticalalignment='top', bbox=props)
+frame3.text(x_frame,max(data_cor), textstr, fontsize=12,verticalalignment='top', bbox=props)
 plt.plot(l[std0:std1],data_cor[std0:std1],'g')	# Zone where the stddev is calculated
 
 frame3.set_xticklabels([]) 			# Remove x-tic labels for the first frame
@@ -330,17 +362,26 @@ plt.xlim(l[0],l[-1])
 plt.plot(l,np.zeros(len(l)),'k--')         	# Line around zero
 plt.plot(l,np.zeros(len(l))+3*stadev,'k--')	# 3 sigma upper limit
 plt.plot(l,np.zeros(len(l))-3*stadev,'k--') 	# 3 sigma down limit
-plt.ylim(-2,2)
+plt.ylim(-1,1)
 plt.savefig(path+'adj_metS_SII_2comp.png')
 
 ##############################################################################################################################################################################
 # We make an F-test to see if it is significant the presence of a second component in the lines. 
 # As the only possible method here is the S-method due to the fact that there are no O-lines in this spectra, 
 # then the method can only be applied to the SII lines (so the wavelength range would be around this two lines)
-
-fvalue, pvalue = stats.f_oneway(data_cor[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20]-SIIfin_fit[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20],data_cor[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20]-SII2fin_fit[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20])
+pre_x = data_cor[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20]-SIIfin_fit[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20]
+pre_y = data_cor[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20]-SII2fin_fit[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20]
+tx, ty = stats.obrientransform(pre_x, pre_y)
+fvalue1, pvalue1 = stats.f_oneway(tx,ty)
+fvalue, pvalue = stats.f_oneway(pre_x,pre_y)
+fvalue2, pvalue2 = stats.levene(pre_x,pre_y)
+###############################################################################################################################################################################
+fstat = ftest(SIIresu.chisqr,twoSIIresu.chisqr,SIIresu.nfree,twoSIIresu.nfree)
 print('')
-print('The probability of a second component (one component vs two components) in this spectra is: '+str(pvalue))
+print('The probability of a second component (one component vs two components) in this spectra with the F-test of IDL is: '+str(fstat['p-value']))
+print('The probability of a second component (one component vs two components) in this spectra with the F-test is: '+str(pvalue))
+print('The probability of a second component (one component vs two components) in this spectra with the F-test (and O Brien) is: '+str(pvalue1))
+print('The probability of a second component (one component vs two components) in this spectra with the Levene-test is: '+str(pvalue2))
 print('')
 
 #######################################################################################################################################
@@ -376,7 +417,7 @@ if trigger == 'Y':
     no = lmfit.Parameter('amp_3', value=amp3,min=0.)
     op = lmfit.Parameter('mu_4', value=mu4,expr='mu_0*(6548./6731.)')
     pq = lmfit.Parameter('sig_4', value=sig4,expr='sig_0')
-    qr = lmfit.Parameter('amp_4', value=amp4,min=0.,expr='amp_2*(1./3.)')
+    qr = lmfit.Parameter('amp_4', value=amp4,min=0.,expr='amp_2*(1./3.)',vary=False)
 
     params.add_many(sl,it,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr)
     resu1 = comp_mod.fit(data_cor,params,x=l)
@@ -399,8 +440,8 @@ if trigger == 'Y':
     stdf_s2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]]-fin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]])
     stdf_s1 = np.std(data_cor[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]]-fin_fit[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]])
     print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 1 component is... ')
-    print('	For SII2: '+str(stdf_s2)+' < '+str(3*stadev))
-    print('	For SII1: '+str(stdf_s1)+' < '+str(3*stadev))
+    print('	For SII2: '+str(stdf_s2/stadev)+' < 3')
+    print('	For SII1: '+str(stdf_s1/stadev)+' < 3')
 
     # We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
     maxfS1 = max(fin_fit[np.where(l>l3)[0][0]:np.where(l<l4)[0][-1]])
@@ -424,13 +465,13 @@ if trigger == 'Y':
     plt.plot(l,(linresu.values['slope']*l+linresu.values['intc']),'k-.',label='Linear fit')
     textstr = '\n'.join((r'$V_{SII_{2}}$ = '+ '{:.2f} +- {:.2f}'.format(vS2,evS2),
 		    r'$\sigma_{SII_{2}}$ = '+ '{:.2f} +- {:.2f}'.format(sigS2,esigS2),
-		    r'$F_{SII_{2}}$ = '+ '{:.3f}'.format(maxfS2)+' $10^{-14}$',
-		    r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(maxfS1)+' $10^{-14}$',
-		    r'$F_{NII_{2}}$ = '+ '{:.3f}'.format(maxfN2)+' $10^{-14}$',
+		    r'$\frac{F_{SII_{2}}}{F_{SII_{1}}}$ = '+ '{:.3f}'.format(maxfS2/maxfS1),
+#		    r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(maxfS1)+' $10^{-14}$',
+#		    r'$F_{NII_{2}}$ = '+ '{:.3f}'.format(maxfN2)+' $10^{-14}$',
 		    r'$F_{H_{\alpha}}$ = '+ '{:.3f}'.format(maxfHa)+' $10^{-14}$',
-		    r'$F_{NII_{1}}$ = '+ '{:.3f}'.format(maxfN1)+' $10^{-14}$'))
+		    r'$\frac{F_{NII_{2}}}{F_{NII_{1}}}$ = '+ '{:.3f}'.format(maxfN2/maxfN1)))
     props = dict(boxstyle='round', facecolor='white', alpha=0.5)
-    frame1.text(6850.,SIIresu.values['amp_0']+12., textstr, fontsize=12,verticalalignment='top', bbox=props)
+    frame1.text(x_frame,max(data_cor), textstr, fontsize=12,verticalalignment='top', bbox=props)
     plt.plot(l[std0:std1],data_cor[std0:std1],'g')	# Zone where the stddev is calculated
     frame1.set_xticklabels([]) 			# Remove x-tic labels for the first frame
     plt.ylabel('Flux (x10$^{-14} \mathrm{erg/s/cm^{2} / \AA}$)',fontsize=14)
@@ -466,8 +507,8 @@ if trigger == 'Y':
 	paramsbH = lmfit.Parameters()
 	# broad components
 	ab = lmfit.Parameter('mu_b',value=mub)
-	bc = lmfit.Parameter('sig_b',value=sigb)
-	rs = lmfit.Parameter('amp_b',value=ampb)
+	bc = lmfit.Parameter('sig_b',value=sigb,min=0.)
+	rs = lmfit.Parameter('amp_b',value=ampb,min=0.)
 	paramsbH.add_many(sl,it,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,ab,bc,rs)
 
     	broadresu = broad_mod.fit(data_cor,paramsbH,x=l)
@@ -494,11 +535,11 @@ if trigger == 'Y':
 	stdb_ha = np.std(data_cor[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]]-broad_fit[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]])
 	stdb_n1 = np.std(data_cor[np.where(l<l9)[0][-1]:np.where(l>l10)[0][0]]-broad_fit[np.where(l<l9)[0][-1]:np.where(l>l10)[0][0]])
     	print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 1 component + Ha is... ')
-    	print('		For SII2: '+str(stdb_s2)+' < '+str(3*stadev))
-    	print('		For SII1: '+str(stdb_s1)+' < '+str(3*stadev))
-    	print('		For NII2: '+str(stdb_n2)+' < '+str(3*stadev))
-    	print('		For Halp: '+str(stdb_ha)+' < '+str(3*stadev))
-    	print('		For SII1: '+str(stdb_n1)+' < '+str(3*stadev))
+    	print('		For SII2: '+str(stdb_s2/stadev)+' < 3')
+    	print('		For SII1: '+str(stdb_s1/stadev)+' < 3')
+    	print('		For NII2: '+str(stdb_n2/stadev)+' < 3')
+    	print('		For Halp: '+str(stdb_ha/stadev)+' < 3')
+    	print('		For SII1: '+str(stdb_n1/stadev)+' < 3')
 
    	# We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
     	maxbS1 = max(broad_fit[np.where(l>l3)[0][0]:np.where(l<l4)[0][-1]])
@@ -507,20 +548,41 @@ if trigger == 'Y':
     	maxbHa = max(broad_fit[np.where(l>l7)[0][0]:np.where(l<l8)[0][-1]])
     	maxbN2 = max(broad_fit[np.where(l>l5)[0][0]:np.where(l<l6)[0][-1]])
         # two comps
-        vbS2 = v_luz*((broadresu.values['mu_0']-l_SII_2)/l_SII_2)
-        vb0S2 = v_luz*((broadresu.values['mu_b']-l_Halpha)/l_Halpha)
-        evbS2 = (v_luz/l_SII_2)*SIIresu.params['mu_0'].stderr
-        evb0S2 = (v_luz/l_SII_2)*broadresu.params['mu_b'].stderr
+        vbS2 = (v_luz*((broadresu.values['mu_0']-l_SII_2)/l_SII_2))-vsys
+        vb0S2 = (v_luz*((broadresu.values['mu_b']-l_Halpha)/l_Halpha))-vsys
         sigbS2 = 47*np.sqrt(broadresu.values['sig_0']**2-sig_inst**2)
         sigb0S2 = 47*np.sqrt(broadresu.values['sig_b']**2-sig_inst**2)
-        esigbS2 = 47*np.sqrt(broadresu.values['sig_0']*SIIresu.params['sig_0'].stderr)/(np.sqrt(broadresu.values['sig_0']**2-sig_inst**2))
-        esigb0S2 = 47*np.sqrt(broadresu.values['sig_b']*broadresu.params['sig_b'].stderr)/(np.sqrt(broadresu.values['sig_b']**2-sig_inst**2))
+        
+	if SIIresu.params['mu_0'].stderr == None: 
+	     print('Problem determining the errors! First component ')
+	     evbS2,esigbS2 = 0.,0.
+	elif SIIresu.params['mu_0'].stderr != None: 
+	     evbS2 = ((v_luz/l_SII_2)*SIIresu.params['mu_0'].stderr)-er_vsys
+             esigbS2 = 47*np.sqrt(broadresu.values['sig_0']*SIIresu.params['sig_0'].stderr)/(np.sqrt(broadresu.values['sig_0']**2-sig_inst**2))
+	
+	if broadresu.params['mu_b'].stderr == None:
+	    print('Problem determining the errors! Broad component ')
+	    evb0S2,esigb0S2 = 0.,0.
+	elif broadresu.params['mu_b'].stderr != None:
+	    evb0S2 = ((v_luz/l_SII_2)*broadresu.params['mu_b'].stderr)-er_vsys
+	    esigb0S2 = 47*np.sqrt(broadresu.values['sig_b']*broadresu.params['sig_b'].stderr)/(np.sqrt(broadresu.values['sig_b']**2-sig_inst**2))
 
 	#############################################################################################################
 	# We make an F-test to see if it is significant the presence of a broad component in the lines. 
-	fbvalue, pbvalue = stats.f_oneway(data_cor[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]]-fin_fit[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]],data_cor[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]]-broad_fit[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]])
+	pre_x = data_cor[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20]-fin_fit[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20]
+	pre_y = data_cor[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20]-broad_fit[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20]
+	tx, ty = stats.obrientransform(pre_x, pre_y)
+	fvalue1, pvalue1 = stats.f_oneway(tx,ty)
+	fbvalue, pbvalue = stats.f_oneway(data_cor[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20]-fin_fit[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20],
+					  data_cor[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20]-broad_fit[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20])
+	statsvalue, pbvalue2 = stats.levene(data_cor[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20]-fin_fit[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20],
+					    data_cor[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20]-broad_fit[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20])
+	fstat = ftest(resu1.chisqr,broadresu.chisqr,resu1.nfree,broadresu.nfree)
 	print('')
-	print('The probability of a second component (one component vs one + broad Halpha components) in this spectra is: '+str(pbvalue))
+	print('The probability of a second component (one component vs one + broad Halpha components) in this spectra with the F-test of IDL is: '+str(fstat['p-value']))
+	print('The probability of a second component (one component vs one + broad Halpha components) in this spectra with the F-test is: '+str(pbvalue))
+	print('The probability of a second component (one component vs one + broad Halpha components) in this spectra with the F-test (and O Brien) is: '+str(pvalue1))
+	print('The probability of a second component (one component vs one + broad Halpha components) in this spectra with the Levene-test is: '+str(pbvalue2))
 	print('')
 
    	################################################ PLOT ######################################################
@@ -541,13 +603,15 @@ if trigger == 'Y':
 			r'$V_{SII_{2-broad}}$ = '+ '{:.2f} +- {:.2f}'.format(vb0S2,evb0S2),
 		    	r'$\sigma_{SII_{2}}$ = '+ '{:.2f} +- {:.2f}'.format(sigbS2,esigbS2),
 		    	r'$\sigma_{SII_{2-broad}}$ = '+ '{:.2f} +- {:.2f}'.format(sigb0S2,esigb0S2),
-		    	r'$F_{SII_{2}}$ = '+ '{:.3f}'.format(maxbS2)+' $10^{-14}$',
-		    	r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(maxbS1)+' $10^{-14}$',
-		    	r'$F_{NII_{2}}$ = '+ '{:.3f}'.format(maxbN2)+' $10^{-14}$',
+#		    	r'$F_{SII_{2}}$ = '+ '{:.3f}'.format(maxbS2)+' $10^{-14}$',
+#		    	r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(maxbS1)+' $10^{-14}$',
+		        r'$\frac{F_{SII_{2}}}{F_{SII_{1}}}$ = '+ '{:.3f}'.format(maxbS2/maxbS1),
 		    	r'$F_{H_{\alpha}}$ = '+ '{:.3f}'.format(maxbHa)+' $10^{-14}$',
-		    	r'$F_{NII_{1}}$ = '+ '{:.3f}'.format(maxbN1)+' $10^{-14}$'))
+		        r'$\frac{F_{NII_{2}}}{F_{NII_{1}}}$ = '+ '{:.3f}'.format(maxbN2/maxbN1)))
+#		    	r'$F_{NII_{2}}$ = '+ '{:.3f}'.format(maxbN2)+' $10^{-14}$',
+#		    	r'$F_{NII_{1}}$ = '+ '{:.3f}'.format(maxbN1)+' $10^{-14}$'))
     	props = dict(boxstyle='round', facecolor='white', alpha=0.5)
-    	frame1.text(6850.,broadresu.values['amp_0']+12., textstr, fontsize=12,verticalalignment='top', bbox=props)
+    	frame1.text(x_frame,max(data_cor), textstr, fontsize=12,verticalalignment='top', bbox=props)
     	plt.plot(l[std0:std1],data_cor[std0:std1],'g')	# Zone where the stddev is calculated
     	frame1.set_xticklabels([]) 			# Remove x-tic labels for the first frame
     	plt.ylabel('Flux (x10$^{-14} \mathrm{erg/s/cm^{2} / \AA}$)',fontsize=14)
@@ -593,7 +657,7 @@ elif trigger == 'N':
     no = lmfit.Parameter('amp_3', value=amp3,min=0.)
     op = lmfit.Parameter('mu_4', value=mu4,expr='mu_0*(6548./6731.)')
     pq = lmfit.Parameter('sig_4', value=sig4,expr='sig_0')
-    qr = lmfit.Parameter('amp_4', value=amp4,expr='amp_2*(1./3.)')
+    qr = lmfit.Parameter('amp_4', value=amp4,expr='amp_2*(1./3.)',vary=False)
     # second components
     aaa = lmfit.Parameter('mu_20', value=twoSIIresu.values["mu_20"],vary=False)
     aab = lmfit.Parameter('sig_20', value=twoSIIresu.values["sig_20"],vary=False)
@@ -609,7 +673,7 @@ elif trigger == 'N':
     aal = lmfit.Parameter('amp_23', value=amp23,min=0.)
     aam = lmfit.Parameter('mu_24', value=mu4,expr='mu_20*(6548./6731.)')
     aan = lmfit.Parameter('sig_24', value=sig24,expr='sig_20')
-    aao = lmfit.Parameter('amp_24', value=amp24,min=0.,expr='amp_22*(1./3.)')
+    aao = lmfit.Parameter('amp_24', value=amp24,min=0.,expr='amp_22*(1./3.)',vary=False)
     params2c.add_many(sl,it,cd,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,aaa,aab,aac,aad,aae,aaf,aag,aah,aai,aaj,aak,aal,aam,aan,aao)
 
     twocompresu = twocomp_mod.fit(data_cor,params2c,x=l)
@@ -642,8 +706,8 @@ elif trigger == 'N':
     stdf2_s2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]]-fin2_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]])
     stdf2_s1 = np.std(data_cor[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]]-fin2_fit[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]])
     print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 2 components is... ')
-    print('	For SII2: '+str(stdf2_s2)+' < '+str(3*stadev))
-    print('	For SII1: '+str(stdf2_s1)+' < '+str(3*stadev))
+    print('	For SII2: '+str(stdf2_s2/stadev)+' < 3')
+    print('	For SII1: '+str(stdf2_s1/stadev)+' < 3')
 
     # We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
     maxb2S1 = max(fin2_fit[np.where(l>l3)[0][0]:np.where(l<l4)[0][-1]])
@@ -652,11 +716,10 @@ elif trigger == 'N':
     maxb2Ha = max(fin2_fit[np.where(l>l7)[0][0]:np.where(l<l8)[0][-1]])
     maxb2N2 = max(fin2_fit[np.where(l>l5)[0][0]:np.where(l<l6)[0][-1]])
     # two comps
-    vb2S2 = v_luz*((twocompresu.values['mu_0']-l_SII_2)/l_SII_2)
-    vb20S2 = v_luz*((twocompresu.values['mu_20']-l_SII_2)/l_SII_2)
-    vb20S2 = v_luz*((twocompresu.values['mu_20']-l_SII_2)/l_SII_2)
-    evb2S2 = (v_luz/l_SII_2)*twoSIIresu.params['mu_0'].stderr
-    evb20S2 = (v_luz/l_SII_2)*twoSIIresu.params['mu_20'].stderr
+    vb2S2 = (v_luz*((twocompresu.values['mu_0']-l_SII_2)/l_SII_2))-vsys
+    vb20S2 = (v_luz*((twocompresu.values['mu_20']-l_SII_2)/l_SII_2))-vsys
+    evb2S2 = ((v_luz/l_SII_2)*twoSIIresu.params['mu_0'].stderr)-er_vsys
+    evb20S2 = ((v_luz/l_SII_2)*twoSIIresu.params['mu_20'].stderr)-er_vsys
     sigb2S2 = 47*np.sqrt(twocompresu.values['sig_0']**2-sig_inst**2)
     sigb20S2 = 47*np.sqrt(twocompresu.values['sig_20']**2-sig_inst**2)
     esigb2S2 = 47*np.sqrt(twocompresu.values['sig_0']*twoSIIresu.params['sig_0'].stderr)/(np.sqrt(twocompresu.values['sig_0']**2-sig_inst**2))
@@ -684,13 +747,15 @@ elif trigger == 'N':
 		    r'$V_{SII_{2-2comp}}$ = '+ '{:.2f} +- {:.2f}'.format(vb20S2,evb20S2),
 		    r'$\sigma_{SII_{2-1comp}}$ = '+ '{:.2f} +- {:.2f}'.format(sigb2S2,esigb2S2),
 		    r'$\sigma_{SII_{2-2comp}}$ = '+ '{:.2f} +- {:.2f}'.format(sigb20S2,esigb20S2),
-		    r'$F_{SII_{2}}$ = '+ '{:.3f}'.format(maxb2S2)+' $10^{-14}$',
-		    r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(maxb2S1)+' $10^{-14}$',
-		    r'$F_{NII_{2}}$ = '+ '{:.3f}'.format(maxb2N2)+' $10^{-14}$',
+#		    r'$F_{SII_{2}}$ = '+ '{:.3f}'.format(maxb2S2)+' $10^{-14}$',
+#		    r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(maxb2S1)+' $10^{-14}$',
+		    r'$\frac{F_{SII_{2}}}{F_{SII_{1}}}$ = '+ '{:.3f}'.format(maxb2S2/maxb2S1),
 		    r'$F_{H_{\alpha}}$ = '+ '{:.3f}'.format(maxb2Ha)+' $10^{-14}$',
-		    r'$F_{NII_{1}}$ = '+ '{:.3f}'.format(maxb2N1)+' $10^{-14}$'))
+		    r'$\frac{F_{NII_{2}}}{F_{NII_{1}}}$ = '+ '{:.3f}'.format(maxb2N2/maxb2N1)))
+#		    r'$F_{NII_{2}}$ = '+ '{:.3f}'.format(maxb2N2)+' $10^{-14}$',
+#		    r'$F_{NII_{1}}$ = '+ '{:.3f}'.format(maxb2N1)+' $10^{-14}$'))
     props = dict(boxstyle='round', facecolor='white', alpha=0.5)
-    frame1.text(6850.,twocompresu.values['amp_0']+13.5, textstr, fontsize=12,verticalalignment='top', bbox=props)
+    frame1.text(x_frame,max(data_cor), textstr, fontsize=12,verticalalignment='top', bbox=props)
     plt.plot(l[std0:std1],data_cor[std0:std1],'g')	# Zone where the stddev is calculated
     frame1.set_xticklabels([]) 			# Remove x-tic labels for the first frame
     plt.ylabel('Flux (x10$^{-14} \mathrm{erg/s/cm^{2} / \AA}$)',fontsize=14)
@@ -764,11 +829,11 @@ elif trigger == 'N':
 	stdb2_ha = np.std(data_cor[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]]-twobroad_fit[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]])
 	stdb2_n1 = np.std(data_cor[np.where(l<l9)[0][-1]:np.where(l>l10)[0][0]]-twobroad_fit[np.where(l<l9)[0][-1]:np.where(l>l10)[0][0]])
     	print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 2 components + Ha is... ')
-    	print('		For SII2: '+str(stdb2_s2)+' < '+str(3*stadev))
-    	print('		For SII1: '+str(stdb2_s1)+' < '+str(3*stadev))
-    	print('		For NII2: '+str(stdb2_n2)+' < '+str(3*stadev))
-    	print('		For Halp: '+str(stdb2_ha)+' < '+str(3*stadev))
-    	print('		For SII1: '+str(stdb2_n1)+' < '+str(3*stadev))
+    	print('		For SII2: '+str(stdb2_s2/stadev)+' < 3')
+    	print('		For SII1: '+str(stdb2_s1/stadev)+' < 3')
+    	print('		For NII2: '+str(stdb2_n2/stadev)+' < 3')
+    	print('		For Halp: '+str(stdb2_ha/stadev)+' < 3')
+    	print('		For NII1: '+str(stdb2_n1/stadev)+' < 3')
 
    	# We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
     	maxfb2S1 = max(twobroad_fit[np.where(l>l3)[0][0]:np.where(l<l4)[0][-1]])
@@ -777,24 +842,45 @@ elif trigger == 'N':
     	maxfb2Ha = max(twobroad_fit[np.where(l>l7)[0][0]:np.where(l<l8)[0][-1]])
     	maxfb2N2 = max(twobroad_fit[np.where(l>l5)[0][0]:np.where(l<l6)[0][-1]])
         # two comps
-        vfbS2 = v_luz*((twobroadresu.values['mu_0']-l_SII_2)/l_SII_2)
-        vfb2S2 = v_luz*((twobroadresu.values['mu_20']-l_SII_2)/l_SII_2)
-        vfb0S2 = v_luz*((twobroadresu.values['mu_b']-l_Halpha)/l_Halpha)
-        evfbS2 = (v_luz/l_SII_2)*twoSIIresu.params['mu_0'].stderr
-        evfb2S2 = (v_luz/l_SII_2)*twoSIIresu.params['mu_20'].stderr
-        evfb0S2 = (v_luz/l_SII_2)*twobroadresu.params['mu_b'].stderr
+        vfbS2 = (v_luz*((twobroadresu.values['mu_0']-l_SII_2)/l_SII_2))-vsys
+        vfb2S2 = (v_luz*((twobroadresu.values['mu_20']-l_SII_2)/l_SII_2))-vsys
+        vfb0S2 = (v_luz*((twobroadresu.values['mu_b']-l_Halpha)/l_Halpha))-vsys
         sigfbS2 = 47*np.sqrt(twobroadresu.values['sig_0']**2-sig_inst**2)
         sigfb2S2 = 47*np.sqrt(twobroadresu.values['sig_20']**2-sig_inst**2)
         sigfb0S2 = 47*np.sqrt(twobroadresu.values['sig_b']**2-sig_inst**2)
-        esigfbS2 = 47*np.sqrt(twobroadresu.values['sig_0']*twoSIIresu.params['sig_0'].stderr)/(np.sqrt(twobroadresu.values['sig_0']**2-sig_inst**2))
-        esigfb2S2 = 47*np.sqrt(twobroadresu.values['sig_20']*twoSIIresu.params['sig_20'].stderr)/(np.sqrt(twobroadresu.values['sig_20']**2-sig_inst**2))
-        esigfb0S2 = 47*np.sqrt(twobroadresu.values['sig_b']*twobroadresu.params['sig_b'].stderr)/(np.sqrt(twobroadresu.values['sig_b']**2-sig_inst**2))
-
+        
+        if twoSIIresu.params['mu_0'].stderr == None: 
+	     print('Problem determining the errors! First component ')
+	     evfbS2,esigfbS2 = 0.,0.
+	elif twoSIIresu.params['mu_0'].stderr != None: 
+	     evfbS2 = ((v_luz/l_SII_2)*twoSIIresu.params['mu_0'].stderr)-er_vsys
+             esigfbS2 = 47*np.sqrt(twobroadresu.values['sig_0']*twoSIIresu.params['sig_0'].stderr)/(np.sqrt(twobroadresu.values['sig_0']**2-sig_inst**2))
+             
+        if twoSIIresu.params['mu_20'].stderr == None:
+	    print('Problem determining the errors! Second component ')
+	    evfb2S2,esigfb2S2 = 0.,0.
+	elif twoSIIresu.params['mu_20'].stderr != None:
+	    evfb2S2 = ((v_luz/l_SII_2)*twoSIIresu.params['mu_20'].stderr)-er_vsys
+	    esigfb2S2 = 47*np.sqrt(twobroadresu.values['sig_20']*twoSIIresu.params['sig_20'].stderr)/(np.sqrt(twobroadresu.values['sig_20']**2-sig_inst**2))
+	
+	if twobroadresu.params['mu_b'].stderr == None:
+	    print('Problem determining the errors! Broad component ')
+	    evfb0S2,esigfb0S2 = 0.,0.
+	elif twobroadresu.params['mu_b'].stderr != None:
+	    evfb0S2 = ((v_luz/l_SII_2)*twobroadresu.params['mu_b'].stderr)-er_vsys
+	    esigfb0S2 = 47*np.sqrt(twobroadresu.values['sig_b']*twobroadresu.params['sig_b'].stderr)/(np.sqrt(twobroadresu.values['sig_b']**2-sig_inst**2))
+	
 	#############################################################################################################
 	# We make an F-test to see if it is significant the presence of a broad component in the lines. 
-	fb2value, pb2value = stats.f_oneway(data_cor[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]]-fin2_fit[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]],data_cor[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]]-twobroad_fit[np.where(l<l9)[0][-1]:np.where(l>l6)[0][0]])
+	fb2value, pb2value = stats.f_oneway(data_cor[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20]-fin2_fit[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20],
+					    data_cor[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20]-twobroad_fit[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20])
+	statvalue2, pb2value2 = stats.levene(data_cor[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20]-fin2_fit[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20],
+					     data_cor[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20]-twobroad_fit[np.where(l<l9)[0][-1]-20:np.where(l>l6)[0][0]+20])
+	fstat = ftest(twocompresu.chisqr,twobroadresu.chisqr,twocompresu.nfree,twobroadresu.nfree)
 	print('')
-	print('The probability of a third component (two component vs two + broad Halpha components) in this spectra is: '+str(pb2value))
+	print('The probability of a third component (two component vs two + broad Halpha components) in this spectra with the F-test of IDL is: '+str(fstat['p-value']))
+	print('The probability of a third component (two component vs two + broad Halpha components) in this spectra with the F-test is: '+str(pb2value))
+	print('The probability of a third component (two component vs two + broad Halpha components) in this spectra with the Levene-test is: '+str(pb2value2))
 	print('')
    	################################################ PLOT ######################################################
     	plt.close('all')
@@ -821,13 +907,15 @@ elif trigger == 'N':
 		    	r'$\sigma_{SII_{2-1comp}}$ = '+ '{:.2f} +- {:.2f}'.format(sigfbS2,esigfbS2),
 		    	r'$\sigma_{SII_{2-2comp}}$ = '+ '{:.2f} +- {:.2f}'.format(sigfb2S2,esigfb2S2),
 		    	r'$\sigma_{SII_{2-broad}}$ = '+ '{:.2f} +- {:.2f}'.format(sigfb0S2,esigfb0S2),
-		    	r'$F_{SII_{2}}$ = '+ '{:.3f}'.format(maxfb2S2)+' $10^{-14}$',
-		    	r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(maxfb2S1)+' $10^{-14}$',
-		    	r'$F_{NII_{2}}$ = '+ '{:.3f}'.format(maxfb2N2)+' $10^{-14}$',
+#		    	r'$F_{SII_{2}}$ = '+ '{:.3f}'.format(maxfb2S2)+' $10^{-14}$',
+#		    	r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(maxfb2S1)+' $10^{-14}$',
+		        r'$\frac{F_{SII_{2}}}{F_{SII_{1}}}$ = '+ '{:.3f}'.format(maxfb2S2/maxfb2S1),
 		    	r'$F_{H_{\alpha}}$ = '+ '{:.3f}'.format(maxfb2Ha)+' $10^{-14}$',
-		    	r'$F_{NII_{1}}$ = '+ '{:.3f}'.format(maxfb2N1)+' $10^{-14}$'))
+		        r'$\frac{F_{NII_{2}}}{F_{NII_{1}}}$ = '+ '{:.3f}'.format(maxfb2N2/maxfb2N1)))
+#		    	r'$F_{NII_{2}}$ = '+ '{:.3f}'.format(maxfb2N2)+' $10^{-14}$',
+#		    	r'$F_{NII_{1}}$ = '+ '{:.3f}'.format(maxfb2N1)+' $10^{-14}$'))
     	props = dict(boxstyle='round', facecolor='white', alpha=0.5)
-    	frame1.text(6850.,twobroadresu.values['amp_0']+12., textstr, fontsize=12,verticalalignment='top', bbox=props)
+    	frame1.text(x_frame,max(data_cor), textstr, fontsize=12,verticalalignment='top', bbox=props)
     	plt.plot(l[std0:std1],data_cor[std0:std1],'g')	# Zone where the stddev is calculated
     	frame1.set_xticklabels([]) 			# Remove x-tic labels for the first frame
     	plt.ylabel('Flux (x10$^{-14} \mathrm{erg/s/cm^{2} / \AA}$)',fontsize=14)
