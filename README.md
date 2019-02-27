@@ -20,4 +20,5 @@ The useful thing here is that the parameters can be named and the code automatic
 
 Also one can use print(lmfit.model.fit_report(result)) for seeing all the results for the parameters, the correlations and the statistics.
 
-Now a first version works perfectly for one spectrum, that is the file not containing the [OI] lines. For the rest of the spectra, the code is under construction yet.
+Now it works perfectly for one spectrum containing and not containing the [OI] lines. 
+Also a new code that takes into account the mixture methods to make the fit has been done. Although this is not implemented yet for a spectrum with 2 components plus a broad Halpha component.
