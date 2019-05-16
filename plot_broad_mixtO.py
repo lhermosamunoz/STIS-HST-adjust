@@ -166,7 +166,7 @@ def broad_plot(path,data_head,l,data_cor,meth,trigger,linresu,refSresu,refOresu,
     	    plt.plot(l,bgaus5,'c--')
     	    plt.plot(l,bgaus6,'c--')
     	    plt.plot(l,bgaus7,'c--',label='N')
-    	    plt.plot(l,bgaus8,'m--',label='B')
+    	    plt.plot(l,bgaus8,'y--',label='B')
     	    plt.plot(l,(linresu.values['slope']*l+linresu.values['intc']),'k-.',label='Linear fit')
     	    props = dict(boxstyle='round', facecolor='white', alpha=0.5)
     	    frame1.text(6350.,max(data_cor)+0.2, textstr, fontsize=12,verticalalignment='top', bbox=props)

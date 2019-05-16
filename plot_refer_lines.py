@@ -4,7 +4,7 @@ import scipy.stats as stats
 from PyAstronomy.pyasl import ftest
 import Ofuncts
 
-def refer_plot(path,data_head,l,data_cor,meth,linresu,oneresu,tworesu,l1,l2,l3,l4,l11,l12,l13,l14,std0,std1,z,erz):
+def refer_plot(path,data_head,l,l_init,data_cor,meth,linresu,oneresu,tworesu,l1,l2,l3,l4,l11,l12,l13,l14,std0,std1,z,erz):
 	'''
 	It gives the plots for one and two components in the reference lines SII and OI
 
@@ -33,16 +33,17 @@ def refer_plot(path,data_head,l,data_cor,meth,linresu,oneresu,tworesu,l1,l2,l3,l
 	v_luz = 299792.458 # km/s
 	plate_scale = data_head['PLATESC']
 	fwhm = 2*np.sqrt(2*np.log(2)) # times sigma
+	pix_to_v = 47	# km/s
 	if plate_scale == 0.05078:
 	    siginst = 1.1	# A if binning 1x1 // 2.2 if binning 1x2
 	    sig_inst = siginst/fwhm
 	    ang_to_pix = 0.554
-	    pix_to_v = 25	# km/s
+#	    pix_to_v = 25	# km/s
 	elif plate_scale == 0.10156:
 	    siginst = 2.2
 	    sig_inst = siginst/fwhm
 	    ang_to_pix = 1.108
-	    pix_to_v = 47	# km/s
+#	    pix_to_v = 47	# km/s
 
 	# Systemic velocity of the galaxy
 	vsys = v_luz*z
@@ -82,16 +83,16 @@ def refer_plot(path,data_head,l,data_cor,meth,linresu,oneresu,tworesu,l1,l2,l3,l
 					 tworesu.values['mu_21'],tworesu.values['sig_21'],tworesu.values['amp_21'])
 	if meth == 'S':
     	# one component
-	    std_2 = np.std(data_cor[np.where(l<l1)[0][-1]-10:np.where(l>l2)[0][0]+10]-onefin_fit[np.where(l<l1)[0][-1]-10:np.where(l>l2)[0][0]+10])
-	    std_1 = np.std(data_cor[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]+10]-onefin_fit[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]+10])
+	    std_2 = np.std(data_cor[np.where(l_init<l1)[0][-1]:np.where(l_init>l2)[0][0]+10]-onefin_fit[np.where(l_init<l1)[0][-1]:np.where(l_init>l2)[0][0]+10])
+	    std_1 = np.std(data_cor[np.where(l_init<l3)[0][-1]-10:np.where(l_init>l4)[0][0]]-onefin_fit[np.where(l_init<l3)[0][-1]-10:np.where(l_init>l4)[0][0]])
 	    ep_1 = std_1/stadev
 	    ep_2 = std_2/stadev
 	    print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 1 component is... ')
 	    print('	For the SII2 line: '+str(ep_2)+' < 3')
 	    print('	For the SII1 line: '+str(ep_1)+' < 3')
 	    # two components
-	    std2_2 = np.std(data_cor[np.where(l<l1)[0][-1]-10:np.where(l>l2)[0][0]+10]-twofin_fit[np.where(l<l1)[0][-1]-10:np.where(l>l2)[0][0]+10])
-	    std2_1 = np.std(data_cor[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]+10]-twofin_fit[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]+10])
+	    std2_2 = np.std(data_cor[np.where(l_init<l1)[0][-1]:np.where(l_init>l2)[0][0]+10]-twofin_fit[np.where(l_init<l1)[0][-1]:np.where(l_init>l2)[0][0]+10])
+	    std2_1 = np.std(data_cor[np.where(l_init<l3)[0][-1]-10:np.where(l_init>l4)[0][0]]-twofin_fit[np.where(l_init<l3)[0][-1]-10:np.where(l_init>l4)[0][0]])
 	    ep2_1 = std2_1/stadev
 	    ep2_2 = std2_2/stadev
 	    print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 2 components is... ')
@@ -99,16 +100,16 @@ def refer_plot(path,data_head,l,data_cor,meth,linresu,oneresu,tworesu,l1,l2,l3,l
 	    print('	For the SII1 line: '+str(ep2_1)+' < 3')
 
 	    # We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
-	    maxS1 = onefin_fit[np.where(abs(oneresu.values['mu_0']-l)<0.27)[0][0]]
-	    maxS2 = onefin_fit[np.where(abs(oneresu.values['mu_1']-l)<0.27)[0][0]]
-	    max2S1 = twofin_fit[np.where(abs(tworesu.values['mu_0']-l)<0.27)[0][0]]
-	    max2S2 = twofin_fit[np.where(abs(tworesu.values['mu_1']-l)<0.27)[0][0]]
+	    maxS1 = onefin_fit[np.where(abs(oneresu.values['mu_0']-l)<0.28)[0][0]]
+	    maxS2 = onefin_fit[np.where(abs(oneresu.values['mu_1']-l)<0.28)[0][0]]
+	    max2S1 = twofin_fit[np.where(abs(tworesu.values['mu_0']-l)<0.28)[0][0]]
+	    max2S2 = twofin_fit[np.where(abs(tworesu.values['mu_1']-l)<0.28)[0][0]]
 	    # one component
-	    vS2 = (v_luz*((oneresu.values['mu_0']-l_SII_2)/l_SII_2))-vsys
+	    vS2 = v_luz*((oneresu.values['mu_0']-l_SII_2)/l_SII_2)
 	    sigS2 = pix_to_v*np.sqrt(oneresu.values['sig_0']**2-sig_inst**2)
 	    # two comps
-	    v2S2 = (v_luz*((tworesu.values['mu_0']-l_SII_2)/l_SII_2))-vsys
-	    v20S2 = (v_luz*((tworesu.values['mu_20']-l_SII_2)/l_SII_2))-vsys
+	    v2S2 = v_luz*((tworesu.values['mu_0']-l_SII_2)/l_SII_2)
+	    v20S2 = v_luz*((tworesu.values['mu_20']-l_SII_2)/l_SII_2)
 	    sig2S2 = pix_to_v*np.sqrt(tworesu.values['sig_0']**2-sig_inst**2)
 	    sig20S2 = pix_to_v*np.sqrt(tworesu.values['sig_20']**2-sig_inst**2)
 	    
@@ -130,27 +131,26 @@ def refer_plot(path,data_head,l,data_cor,meth,linresu,oneresu,tworesu,l1,l2,l3,l
 
 	    textstr = '\n'.join((r'$V_{SII_{2}}$ = '+ '{:.2f} +- {:.2f}'.format(vS2,evS2),
 			    r'$\sigma_{SII_{2}}$ = '+ '{:.2f} +- {:.2f}'.format(sigS2,esigS2),
-			    r'$F_{SII_{2}}$ = '+ '{:.3f}'.format(maxS2)+' $10^{-14}$',
-			    r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(maxS1)+' $10^{-14}$'))
+			    r'$\frac{F_{SII_{2}}}{F_{SII_{1}}}$ = '+ '{:.3f}'.format(maxS2/maxS1)))
 	    textstr2 = '\n'.join((r'$V_{SII_{2-1comp}}$ = '+ '{:.2f} +- {:.2f}'.format(v2S2,ev2S2),
 			    r'$V_{SII_{2-2comp}}$ = '+ '{:.2f} +- {:.2f}'.format(v20S2,ev20S2),
 			    r'$\sigma_{SII_{2-1comp}}$ = '+ '{:.2f} +- {:.2f}'.format(sig2S2,esig2S2),
 			    r'$\sigma_{SII_{2-2comp}}$ = '+ '{:.2f} +- {:.2f}'.format(sig20S2,esig20S2),
-			    r'$F_{SII_{2}}$ = '+ '{:.3f}'.format(max2S2)+' $10^{-14}$',
-			    r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(max2S1)+' $10^{-14}$'))
+			    r'$\frac{F_{SII_{2}}}{F_{SII_{1}}}$ = '+ '{:.3f}'.format(max2S2/max2S1)))
+#			    r'$F_{SII_{1}}$ = '+ '{:.3f}'.format(max2S1)+' $10^{-14}$'))
 	
 	elif meth == 'O':
 	    # one component
-	    std_1 = np.std(data_cor[np.where(l<l11)[0][-1]-10:np.where(l>l12)[0][0]]-onefin_fit[np.where(l<l11)[0][-1]-10:np.where(l>l12)[0][0]])
-	    std_2 = np.std(data_cor[np.where(l<l13)[0][-1]:np.where(l>l14)[0][0]+10]-onefin_fit[np.where(l<l13)[0][-1]:np.where(l>l14)[0][0]+10])
+	    std_1 = np.std(data_cor[np.where(l_init<l11)[0][-1]-10:np.where(l_init>l12)[0][0]]-onefin_fit[np.where(l_init<l11)[0][-1]-10:np.where(l_init>l12)[0][0]])
+	    std_2 = np.std(data_cor[np.where(l_init<l13)[0][-1]:np.where(l_init>l14)[0][0]+10]-onefin_fit[np.where(l_init<l13)[0][-1]:np.where(l_init>l14)[0][0]+10])
 	    ep_1 = std_1/stadev
 	    ep_2 = std_2/stadev
 	    print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 1 component is... ')
 	    print('	For the SII2 line: '+str(ep_2)+' < 3')
 	    print('	For the SII1 line: '+str(ep_1)+' < 3')
 	    # two components
-	    std2_1 = np.std(data_cor[np.where(l<l11)[0][-1]-10:np.where(l>l12)[0][0]+10]-twofin_fit[np.where(l<l11)[0][-1]-10:np.where(l>l12)[0][0]+10])
-	    std2_2 = np.std(data_cor[np.where(l<l13)[0][-1]-10:np.where(l>l14)[0][0]+10]-twofin_fit[np.where(l<l13)[0][-1]-10:np.where(l>l14)[0][0]+10])
+	    std2_1 = np.std(data_cor[np.where(l_init<l11)[0][-1]-10:np.where(l_init>l12)[0][0]+10]-twofin_fit[np.where(l_init<l11)[0][-1]-10:np.where(l_init>l12)[0][0]+10])
+	    std2_2 = np.std(data_cor[np.where(l_init<l13)[0][-1]-10:np.where(l_init>l14)[0][0]+10]-twofin_fit[np.where(l_init<l13)[0][-1]-10:np.where(l_init>l14)[0][0]+10])
 	    ep2_1 = std2_1/stadev
 	    ep2_2 = std2_2/stadev
 	    print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 2 components is... ')
@@ -163,11 +163,11 @@ def refer_plot(path,data_head,l,data_cor,meth,linresu,oneresu,tworesu,l1,l2,l3,l
 	    max2S1 = twofin_fit[np.where(abs(tworesu.values['mu_0']-l)<0.27)[0][0]]
 	    max2S2 = twofin_fit[np.where(abs(tworesu.values['mu_1']-l)<0.27)[0][0]]
 	    # one component
-	    vS2 = (v_luz*((oneresu.values['mu_0']-l_OI_1)/l_OI_1))-vsys
+	    vS2 = v_luz*((oneresu.values['mu_0']-l_OI_1)/l_OI_1)
 	    sigS2 = pix_to_v*np.sqrt(oneresu.values['sig_0']**2-sig_inst**2)
 	    # two comps
-	    v2S2 = (v_luz*((tworesu.values['mu_0']-l_OI_1)/l_OI_1))-vsys
-	    v20S2 = (v_luz*((tworesu.values['mu_20']-l_OI_1)/l_OI_1))-vsys
+	    v2S2 = v_luz*((tworesu.values['mu_0']-l_OI_1)/l_OI_1)
+	    v20S2 = v_luz*((tworesu.values['mu_20']-l_OI_1)/l_OI_1)
 	    sig2S2 = pix_to_v*np.sqrt(tworesu.values['sig_0']**2-sig_inst**2)
 	    sig20S2 = pix_to_v*np.sqrt(tworesu.values['sig_20']**2-sig_inst**2)
 
@@ -189,25 +189,24 @@ def refer_plot(path,data_head,l,data_cor,meth,linresu,oneresu,tworesu,l1,l2,l3,l
 
 	    textstr = '\n'.join((r'$V_{OI_{1}}$ = '+ '{:.2f} +- {:.2f}'.format(vS2,evS2),
 			    r'$\sigma_{OI_{1}}$ = '+ '{:.2f} +- {:.2f}'.format(sigS2,esigS2),
-			    r'$F_{OI_{1}}$ = '+ '{:.3f}'.format(maxS2)+' $10^{-14}$',
-			    r'$F_{OI_{2}}$ = '+ '{:.3f}'.format(maxS1)+' $10^{-14}$'))
+			    r'$\frac{F_{OI_{2}}}{F_{OI_{1}}}$ = '+ '{:.3f}'.format(maxS2/maxS1)))
 	    textstr2 = '\n'.join((r'$V_{OI_{1-1comp}}$ = '+ '{:.2f} +- {:.2f}'.format(v2S2,ev2S2),
 			    r'$V_{OI_{1-2comp}}$ = '+ '{:.2f} +- {:.2f}'.format(v20S2,ev20S2),
 			    r'$\sigma_{OI_{1-1comp}}$ = '+ '{:.2f} +- {:.2f}'.format(sig2S2,esig2S2),
 			    r'$\sigma_{OI_{1-2comp}}$ = '+ '{:.2f} +- {:.2f}'.format(sig20S2,esig20S2),
-			    r'$F_{OI_{1}}$ = '+ '{:.3f}'.format(max2S2)+' $10^{-14}$',
-			    r'$F_{OI_{2}}$ = '+ '{:.3f}'.format(max2S1)+' $10^{-14}$'))
+			    r'$\frac{F_{OI_{2}}}{F_{OI_{1}}}$ = '+ '{:.3f}'.format(maxS2/maxS1)))
 	
+
 	################################################ PLOT ######################################################
 	plt.close()
 	# MAIN plot
 	fig1   = plt.figure(1,figsize=(10, 9))
-	frame1 = fig1.add_axes((.1,.3,.8,.6)) 	     # xstart, ystart, xend, yend [units are fraction of the image frame, from bottom left corner]
-	plt.plot(l,data_cor)			     # Initial data
+	frame1 = fig1.add_axes((.1,.25,.85,.65)) 	     # xstart, ystart, xend, yend [units are fraction of the image frame, from bottom left corner]
+	plt.plot(l,data_cor,'k')			     # Initial data
 	plt.plot(l,onefin_fit,'r-')
-	plt.plot(l,gaus1,'c--')
-	plt.plot(l,gaus2,'c--',label='N')
-	plt.plot(l,(linresu.values['slope']*l+linresu.values['intc']),'k-.',label='Linear fit')
+	plt.plot(l,(linresu.values['slope']*l+linresu.values['intc']),c='y',linestyle='-.',label='Linear fit')
+	plt.plot(l,gaus1,'b-')
+	plt.plot(l,gaus2,'b-',label='Narrow component')
 	props = dict(boxstyle='round', facecolor='white', alpha=0.5)
 	frame1.text(6350.,max(data_cor), textstr, fontsize=12,verticalalignment='top', bbox=props)
 	plt.plot(l[std0:std1],data_cor[std0:std1],'g')	# Zone where the stddev is calculated
@@ -219,15 +218,15 @@ def refer_plot(path,data_head,l,data_cor,meth,linresu,oneresu,tworesu,l1,l2,l3,l
 	plt.legend(loc='best')
 	
 	# RESIDUAL plot
-	frame2 = fig1.add_axes((.1,.1,.8,.2))
-	plt.plot(l,data_cor-onefin_fit,color='grey')		# Main
+	frame2 = fig1.add_axes((.1,.1,.85,.15))
+	plt.plot(l,data_cor-onefin_fit,c='k')		# Main
 	plt.xlabel('Wavelength ($\AA$)',fontsize=14)
 	plt.ylabel('Residuals',fontsize=14)
 	plt.tick_params(axis='both', labelsize=12)
 	plt.xlim(l[0],l[-1])
-	plt.plot(l,np.zeros(len(l)),'k--')         	# Line around zero
-	plt.plot(l,np.zeros(len(l))+3*stadev,'k--')	# 3 sigma upper limit
-	plt.plot(l,np.zeros(len(l))-3*stadev,'k--') 	# 3 sigma down limit
+	plt.plot(l,np.zeros(len(l)),c='grey',linestyle='--')         	# Line around zero
+	plt.plot(l,np.zeros(len(l))+2*stadev,c='grey',linestyle='--')	# 3 sigma upper limit
+	plt.plot(l,np.zeros(len(l))-2*stadev,c='grey',linestyle='--') 	# 3 sigma down limit
 	plt.ylim(-(3*stadev)*2,(3*stadev)*2)
 	
 	plt.savefig(path+'adj_met'+str(meth)+'_ref_1comp.png')
@@ -236,14 +235,14 @@ def refer_plot(path,data_head,l,data_cor,meth,linresu,oneresu,tworesu,l1,l2,l3,l
 	# Two components in reference line
 	# MAIN plot
 	fig2   = plt.figure(2,figsize=(10, 9))
-	frame3 = fig2.add_axes((.1,.3,.8,.6)) 	     # xstart, ystart, xend, yend [units are fraction of the image frame, from bottom left corner]
-	plt.plot(l,data_cor)			     # Initial data
+	frame3 = fig2.add_axes((.1,.25,.85,.65)) 	     # xstart, ystart, xend, yend [units are fraction of the image frame, from bottom left corner]
+	plt.plot(l,data_cor,'k')		     # Initial data
 	plt.plot(l,twofin_fit,'r-')
-	plt.plot(l,gaus21,'c--')
-	plt.plot(l,gaus22,'c--',label='N')
-	plt.plot(l,gaus23,'m--')
-	plt.plot(l,gaus24,'m--',label='S')
-	plt.plot(l,(linresu.values['slope']*l+linresu.values['intc']),'k-.',label='Linear fit')
+	plt.plot(l,(linresu.values['slope']*l+linresu.values['intc']),c='y',linestyle='-.',label='Linear fit')
+	plt.plot(l,gaus21,'b-')
+	plt.plot(l,gaus22,'b-',label='Narrow component')
+	plt.plot(l,gaus23,'m-')
+	plt.plot(l,gaus24,'m-',label='Secondary component')
 	props = dict(boxstyle='round', facecolor='white', alpha=0.5)
 	frame3.text(6350.,max(data_cor), textstr2, fontsize=12,verticalalignment='top', bbox=props)
 	plt.plot(l[std0:std1],data_cor[std0:std1],'g')	# Zone where the stddev is calculated
@@ -255,15 +254,15 @@ def refer_plot(path,data_head,l,data_cor,meth,linresu,oneresu,tworesu,l1,l2,l3,l
 	plt.legend(loc='best')
 	
 	# RESIDUAL plot
-	frame4 = fig2.add_axes((.1,.1,.8,.2))
-	plt.plot(l,data_cor-twofin_fit,color='grey')		# Main
+	frame4 = fig2.add_axes((.1,.1,.85,.15))
+	plt.plot(l,data_cor-twofin_fit,c='k')		# Main
 	plt.xlabel('Wavelength ($\AA$)',fontsize=14)
 	plt.ylabel('Residuals',fontsize=14)
 	plt.tick_params(axis='both', labelsize=12)
 	plt.xlim(l[0],l[-1])
-	plt.plot(l,np.zeros(len(l)),'k--')         	# Line around zero
-	plt.plot(l,np.zeros(len(l))+3*stadev,'k--')	# 3 sigma upper limit
-	plt.plot(l,np.zeros(len(l))-3*stadev,'k--') 	# 3 sigma down limit
+	plt.plot(l,np.zeros(len(l)),c='grey',linestyle='--')         	# Line around zero
+	plt.plot(l,np.zeros(len(l))+2*stadev,c='grey',linestyle='--')	# 3 sigma upper limit
+	plt.plot(l,np.zeros(len(l))-2*stadev,c='grey',linestyle='--') 	# 3 sigma down limit
 	plt.ylim(-(3*stadev)*2,(3*stadev)*2)
 	
 	plt.savefig(path+'adj_met'+str(meth)+'_ref_2comp.png')
@@ -275,12 +274,12 @@ def refer_plot(path,data_head,l,data_cor,meth,linresu,oneresu,tworesu,l1,l2,l3,l
 	if oneresu.chisqr < tworesu.chisqr: 
 	    print('The probability cannot be calculated as both chi-square are equal!')
 	else: 
-	    fvalue, pvalue = stats.f_oneway(data_cor[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20]-onefin_fit[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20],
-						data_cor[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20]-twofin_fit[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20])
-	    statist, pvalue2 = stats.levene(data_cor[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20]-onefin_fit[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20],
-						data_cor[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20]-twofin_fit[np.where(l>l3)[0][0]-20:np.where(l<l2)[0][-1]+20])
-	    pre_x = data_cor[np.where(l<l3)[0][-1]-20:np.where(l>l2)[0][0]+20]-onefin_fit[np.where(l<l3)[0][-1]-20:np.where(l>l2)[0][0]+20]
-	    pre_y = data_cor[np.where(l<l3)[0][-1]-20:np.where(l>l2)[0][0]+20]-twofin_fit[np.where(l<l3)[0][-1]-20:np.where(l>l2)[0][0]+20]
+	    fvalue, pvalue = stats.f_oneway(data_cor[np.where(l_init>l3)[0][0]-20:np.where(l_init<l2)[0][-1]+20]-onefin_fit[np.where(l_init>l3)[0][0]-20:np.where(l_init<l2)[0][-1]+20],
+						data_cor[np.where(l_init>l3)[0][0]-20:np.where(l_init<l2)[0][-1]+20]-twofin_fit[np.where(l_init>l3)[0][0]-20:np.where(l_init<l2)[0][-1]+20])
+	    statist, pvalue2 = stats.levene(data_cor[np.where(l_init>l3)[0][0]-20:np.where(l_init<l2)[0][-1]+20]-onefin_fit[np.where(l_init>l3)[0][0]-20:np.where(l_init<l2)[0][-1]+20],
+						data_cor[np.where(l_init>l3)[0][0]-20:np.where(l_init<l2)[0][-1]+20]-twofin_fit[np.where(l_init>l3)[0][0]-20:np.where(l_init<l2)[0][-1]+20])
+	    pre_x = data_cor[np.where(l_init<l3)[0][-1]-20:np.where(l_init>l2)[0][0]+20]-onefin_fit[np.where(l_init<l3)[0][-1]-20:np.where(l_init>l2)[0][0]+20]
+	    pre_y = data_cor[np.where(l_init<l3)[0][-1]-20:np.where(l_init>l2)[0][0]+20]-twofin_fit[np.where(l_init<l3)[0][-1]-20:np.where(l_init>l2)[0][0]+20]
 	    tx, ty = stats.obrientransform(pre_x, pre_y)
 	    fvalue1, pvalue1 = stats.f_oneway(tx,ty)
 	    fstat = ftest(oneresu.chisqr,tworesu.chisqr,oneresu.nfree,tworesu.nfree)
